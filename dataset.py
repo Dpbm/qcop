@@ -12,23 +12,22 @@ import json
 
 SHOTS = 1000
 
-MIN_QUBITS = 1
-MAX_QUBITS = 20
+N_QUBITS = 5
 
 MIN_DEPTH = 1
-MAX_DEPTH = 20
+MAX_DEPTH = 100
 
 TOTAL_THREADS = 10
 
 DATASET_SIZE = 2000
 DATASET_PATH = os.path.join('.', 'dataset')
 
-def generate(sim, index, n_qubits, depth):
+def generate(sim, index, depth):
 
-    qc = random_circuit(n_qubits, depth)
+    qc = random_circuit(N_QUBITS, depth)
     qc.measure_all()
    
-    filename = f'{index}-{n_qubits}-{depth}.jpeg'
+    filename = f'{index}-{depth}.jpeg'
     circuit_image_path = os.path.join(DATASET_PATH, filename)
     qc.draw('mpl', filename=circuit_image_path)
 
@@ -40,7 +39,6 @@ def generate(sim, index, n_qubits, depth):
     result_aer = sampler_aer.run([aer_isa], shots=SHOTS).result().quasi_dists[0]
     
     return {
-        "n_qubits":n_qubits,
         "depth":depth,
         "file": filename,
         "result": json.dumps(result_aer),
@@ -50,17 +48,16 @@ def main():
     os.makedirs(DATASET_PATH, exist_ok=True)
 
     index = 0 
-    df = pd.DataFrame(columns=("n_qubits","depth", "file", "result"))
+    df = pd.DataFrame(columns=("depth", "file", "result"))
 
     with tqdm(total=DATASET_SIZE)  as progress:
 
         while index < DATASET_SIZE:
             args = []
             for i in range(TOTAL_THREADS):
-                n_qubits = np.random.randint(MIN_QUBITS, MAX_QUBITS)
                 depth = np.random.randint(MIN_DEPTH, MAX_DEPTH)
                 sim = AerSimulator()
-                args.append((sim, index, n_qubits, depth))
+                args.append((sim, index, depth))
                 index += 1
 
             with Pool(processes=TOTAL_THREADS) as pool:
