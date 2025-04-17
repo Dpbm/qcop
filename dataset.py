@@ -9,13 +9,14 @@ from multiprocessing.pool import Pool
 from tqdm import tqdm
 import pandas as pd
 import json
+import hashlib
 
 SHOTS = 1000
 
 N_QUBITS = 5
 
 MIN_DEPTH = 1
-MAX_DEPTH = 100
+MAX_DEPTH = 30
 
 TOTAL_THREADS = 10
 
@@ -31,9 +32,11 @@ def generate(sim, index, depth):
     circuit_image_path = os.path.join(DATASET_PATH, filename)
     qc.draw('mpl', filename=circuit_image_path)
 
+    with open(circuit_image_path, "rb") as file:
+        file_hash = hashlib.md5(file.read()).hexdigest()
+
     pm_aer = generate_preset_pass_manager(backend=sim, optimization_level=0)
     aer_isa = pm_aer.run([qc])[0]
-
 
     sampler_aer = Sampler()
     result_aer = sampler_aer.run([aer_isa], shots=SHOTS).result().quasi_dists[0]
@@ -42,13 +45,14 @@ def generate(sim, index, depth):
         "depth":depth,
         "file": filename,
         "result": json.dumps(result_aer),
+        "hash": file_hash
     }
     
 def main():
     os.makedirs(DATASET_PATH, exist_ok=True)
 
     index = 0 
-    df = pd.DataFrame(columns=("depth", "file", "result"))
+    df = pd.DataFrame(columns=("depth", "file", "result", "hash"))
 
     with tqdm(total=DATASET_SIZE)  as progress:
 
