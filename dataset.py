@@ -11,22 +11,18 @@ import pandas as pd
 import json
 import hashlib
 
-SHOTS = 1000
+from constants import *
 
-N_QUBITS = 5
 
-MIN_DEPTH = 1
-MAX_DEPTH = 30
+def generate(sim, index, initial_depth):
 
-TOTAL_THREADS = 10
-
-DATASET_SIZE = 2000
-DATASET_PATH = os.path.join('.', 'dataset')
-
-def generate(sim, index, depth):
-
-    qc = random_circuit(N_QUBITS, depth)
+    qc = random_circuit(N_QUBITS, initial_depth)
     qc.measure_all()
+    
+    pm_aer = generate_preset_pass_manager(backend=sim, optimization_level=0)
+    aer_isa = pm_aer.run([qc])[0]
+
+    depth = aer_isa.depth()
    
     filename = f'{index}-{depth}.jpeg'
     circuit_image_path = os.path.join(DATASET_PATH, filename)
@@ -34,9 +30,6 @@ def generate(sim, index, depth):
 
     with open(circuit_image_path, "rb") as file:
         file_hash = hashlib.md5(file.read()).hexdigest()
-
-    pm_aer = generate_preset_pass_manager(backend=sim, optimization_level=0)
-    aer_isa = pm_aer.run([qc])[0]
 
     sampler_aer = Sampler()
     result_aer = sampler_aer.run([aer_isa], shots=SHOTS).result().quasi_dists[0]
@@ -72,7 +65,7 @@ def main():
 
             progress.update(TOTAL_THREADS)
 
-    df.to_csv("dataset.csv", index=False)
+    df.to_csv(DATASET_FILE, index=False)
 
 if __name__ == "__main__":
     main()

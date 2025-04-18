@@ -2,8 +2,7 @@ import os
 import pandas as pd
 from tqdm import tqdm
 
-DATASET_PATH = os.path.join(".", "dataset")
-DATASET_FILE = "dataset.csv"
+from constants import DATASET_PATH, DATASET_FILE
 
 
 def main():

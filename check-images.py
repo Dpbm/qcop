@@ -3,8 +3,8 @@ import hashlib
 import os
 from tqdm import tqdm
 
-THREADS = 10
-DATASET_PATH = os.path.join(".", "dataset")
+from constants import THREADS, DATASET_PATH
+
 
 def check_image(image):
     with open(image, "rb") as file:
