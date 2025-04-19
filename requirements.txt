@@ -8,3 +8,5 @@ pylatexenc
 qiskit-ibm-runtime
 qiskit_qasm3_import
 Pillow
+torch
+torchvision

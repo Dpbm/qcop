@@ -15,3 +15,5 @@ dependencies:
       - qiskit_qasm3_import
       - Pillow
       - qiskit-aer
+      - torch
+      - torchvision
