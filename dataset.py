@@ -13,6 +13,8 @@ import hashlib
 from PIL import Image
 import torch 
 from torchvision.transforms import v2
+import h5py
+
 from constants import *
 
 def generate_image(sim, index, depth):
@@ -91,14 +93,15 @@ def transform_images():
         v2.ToDtype(torch.float16),
     ])
 
-    with open(NPY_IMAGES_FILE, "wb") as npy:
-        for image in tqdm(os.listdir(DATASET_PATH)):
-            image_path = os.path.join(DATASET_PATH, image)
+    files = os.listdir(DATASET_PATH)
+
+    with h5py.File(IMAGES_ARRAY_FILE, "w") as file:
+        for image_i in tqdm(range(len(files))):
+            image_path = os.path.join(DATASET_PATH, files[image_i])
             
             with Image.open(image_path) as img:
-                tensor = transform
-                np.save(npy, (np.asarray(img)/255.0))
-
+                tensor = transform(img)/255.0
+                file.create_dataset(f"{image_i}", data=tensor)
 
 def main():
     os.makedirs(DATASET_PATH, exist_ok=True)

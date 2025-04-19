@@ -1,5 +1,5 @@
 clean-data:
-	rm -rf dataset/ dataset.csv *.npy *.npz
+	rm -rf dataset/ dataset.csv *.npy *.npz *.h5
 
 gen-dataset:
 	python dataset.py 

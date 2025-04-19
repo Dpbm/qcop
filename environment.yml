@@ -17,3 +17,4 @@ dependencies:
       - qiskit-aer
       - torch
       - torchvision
+      - h5py
