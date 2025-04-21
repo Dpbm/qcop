@@ -9,3 +9,8 @@ train: del-pred
 
 del-pred:
 	rm -rf ghz-prediction.pt
+
+ghz: del-pred
+	rm -rf ghz.jpeg
+	python ghz.py
+	

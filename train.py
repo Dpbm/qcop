@@ -8,7 +8,8 @@ import h5py
 import json
 import time
 
-from constants import IMAGES_TRAIN, IMAGES_TEST, debug, DATASET_PATH, DATASET_FILE, EPOCHS
+from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS
+from helpers import debug, PlotImages
 
 class ImagesDataset(Dataset):
     def __init__(self, device, file):
@@ -37,10 +38,10 @@ class Model(torch.nn.Module):
         
         # image shape: 3, 1324, 2631
         self.conv1 = torch.nn.Conv2d(3, 64, kernel_size=3, stride=1)
-        self.pool1 = torch.nn.MaxPool2d(4,stride=4)
+        self.pool1 = torch.nn.AvgPool2d(4,stride=4)
 
         self.conv2 = torch.nn.Conv2d(64, 32, kernel_size=3, stride=1)
-        self.pool2 = torch.nn.MaxPool2d(3,stride=3)
+        self.pool2 = torch.nn.AvgPool2d(3,stride=3)
 
         self.conv3 = torch.nn.Conv2d(32, 16, kernel_size=3, stride=1)
         self.pool3 = torch.nn.MaxPool2d(3,stride=3)
@@ -51,65 +52,69 @@ class Model(torch.nn.Module):
         self.conv5 = torch.nn.Conv2d(8, 4, kernel_size=2, stride=1)
         self.pool5 = torch.nn.MaxPool2d(2, stride=2)
         
-        self.fc1 = torch.nn.Linear(544,120)
-        self.fc2 = torch.nn.Linear(120,48)
-        self.fc3 = torch.nn.Linear(48,32)
-        self.dropout = torch.nn.Dropout(p=0.2)
+        self.fc1 = torch.nn.Linear(84,42)
+        self.fc2 = torch.nn.Linear(42, 32)
+        self.dropout = torch.nn.Dropout(p=0.3)
 
     def forward(self, image):
-        debug(f"Input Data: {image.shape}")
+        debug("Input Data: ", image.shape)
 
         image = self.conv1(image)
         image = torch.nn.functional.relu(image)
+        PlotImages.plot_filters(image, title="Conv1")
         debug(image.shape)
 
         image = self.pool1(image)
+        PlotImages.plot_filters(image, title="Pool1")
         debug(image.shape)
 
         image = self.conv2(image)
         image = torch.nn.functional.relu(image)
+        PlotImages.plot_filters(image, title="Conv2")
         debug(image.shape)
 
         image = self.pool2(image)
+        PlotImages.plot_filters(image, title="Pool2")
         debug(image.shape)
         
         image = self.conv3(image)
         image = torch.nn.functional.relu(image)
+        PlotImages.plot_filters(image, title="Conv3")
         debug(image.shape)
 
         image = self.pool3(image)
+        PlotImages.plot_filters(image, title="Pool3")
         debug(image.shape)
 
         image = self.conv4(image)
         image = torch.nn.functional.relu(image)
+        PlotImages.plot_filters(image, title="Conv4")
         debug(image.shape)
 
         image = self.pool4(image)
+        PlotImages.plot_filters(image, title="Pool4")
         debug(image.shape)
         
         image = self.conv5(image)
         image = torch.nn.functional.relu(image)
+        PlotImages.plot_filters(image, title="Conv5")
         debug(image.shape)
 
         image = self.pool5(image)
+        PlotImages.plot_filters(image, title="Pool5")
         debug(image.shape)
         
-        image = image.view(image.shape[0], 544)
+        image = image.view(image.shape[0], 84)
         debug(image.shape)
 
         image = self.fc1(image)
         image = torch.nn.functional.relu(image)
         image = self.dropout(image)
         debug(image.shape)
-
         
         image = self.fc2(image)
-        image = torch.nn.functional.relu(image)
-        image = self.dropout(image)
         debug(image.shape)
-
-        image = self.fc3(image)
-        debug(image.shape)
+        
 
         image = torch.nn.functional.softmax(image, dim=1)
         debug(image.shape)
@@ -154,8 +159,8 @@ def train(device):
     train_data = ImagesDataset(device, IMAGES_TRAIN)
     test_data = ImagesDataset(device, IMAGES_TEST)
 
-    data_loader_train = DataLoader(train_data, batch_size=4, shuffle=False)
-    data_loader_test = DataLoader(test_data, batch_size=4, shuffle=False)
+    data_loader_train = DataLoader(train_data, batch_size=2, shuffle=False)
+    data_loader_test = DataLoader(test_data, batch_size=2, shuffle=False)
 
     opt = torch.optim.Adam(model.parameters(), lr=1e-4)
     best_loss = 1_000_000
@@ -193,8 +198,8 @@ def main():
         torch.cuda.empty_cache()
 
     debug(f"using: {device}")
-    model = train(device)
-    
+
+    # ---- FOR MANUA TESTS ----- 
     # model = Model().to(device)
     # test = ImagesDataset(device, IMAGES_TRAIN)
     # test_loader = DataLoader(test, batch_size=1, shuffle=False)
@@ -204,11 +209,14 @@ def main():
     # image,label = next(loader_iter)
     # print(f"correct: {label}")
     # print(f"eval: {model(image)}")
+    
+    model = train(device)
+    mode.eval()
 
     ghz = torch.load("ghz.pt", map_location=device)
     ghz = ghz.to(torch.float32)
     result = model(torch.unsqueeze(ghz,0))
-
+    print("ghz prediction: ", result)
     torch.save(result, "ghz-prediction.pt")
 
 if __name__ == "__main__":
