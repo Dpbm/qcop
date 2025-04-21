@@ -4,9 +4,6 @@ clean-data:
 gen-dataset:
 	python dataset.py 
 
-check:
-	python check-images.py
-
 train: del-pred
 	python train.py
 

@@ -20,7 +20,7 @@ DATASET_FILE = "dataset.csv"
 IMAGES_TRAIN = "images_train.h5"
 IMAGES_TEST = "images_test.h5"
 
-new_dim = (1324, 2631)
+new_dim = (1000, 2000)
 
 
 def debug(inp):
