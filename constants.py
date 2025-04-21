@@ -1,7 +1,9 @@
 import os
 import pandas as pd
 
-DEBUG = False
+EPOCHS = 30
+
+DEBUG = True 
 
 SHOTS = 1000
 
@@ -15,10 +17,11 @@ TOTAL_THREADS = THREADS = 10
 DATASET_SIZE = 1000
 DATASET_PATH = os.path.join('.', 'dataset')
 DATASET_FILE = "dataset.csv"
-IMAGES_ARRAY_FILE = "images.h5"
+IMAGES_TRAIN = "images_train.h5"
+IMAGES_TEST = "images_test.h5"
 
-def get_new_dim():
-    return 1324, 2631
+new_dim = (1324, 2631)
+
 
 def debug(inp):
     if(not DEBUG):

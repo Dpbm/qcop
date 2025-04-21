@@ -7,5 +7,8 @@ gen-dataset:
 check:
 	python check-images.py
 
-train:
+train: del-pred
 	python train.py
+
+del-pred:
+	rm -rf ghz-prediction.pt
