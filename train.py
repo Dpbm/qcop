@@ -8,6 +8,7 @@ import h5py
 import json
 import time
 
+
 from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS
 from helpers import debug, PlotImages
 
@@ -37,117 +38,74 @@ class Model(torch.nn.Module):
         super(Model, self).__init__()
         
         # image shape: 3, 1324, 2631
-        self.conv1 = torch.nn.Conv2d(3, 64, kernel_size=3, stride=1)
-        self.conv2 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        self.pool1 = torch.nn.AvgPool2d(4,stride=4)
-
-        self.conv3 = torch.nn.Conv2d(64, 32, kernel_size=3, stride=1)
-        self.pool2 = torch.nn.AvgPool2d(3,stride=3)
-
-        self.conv4 = torch.nn.Conv2d(32, 16, kernel_size=3, stride=1)
-        self.pool3 = torch.nn.MaxPool2d(3,stride=3)
-
-        self.conv5 = torch.nn.Conv2d(16, 8, kernel_size=2, stride=1)
-        self.pool4 = torch.nn.MaxPool2d(2, stride=2)
-
-        self.conv6 = torch.nn.Conv2d(8, 4, kernel_size=2, stride=1)
-        self.pool5 = torch.nn.MaxPool2d(2, stride=2)
-
-        self.fc1 = torch.nn.Linear(84, 42)
-        self.fc2 = torch.nn.Linear(42, 32)
-        self.dropout = torch.nn.Dropout(p=0.3)
+        self.pool = torch.nn.MaxPool2d(2, stride=2)
 
 
-        self.norm64 = torch.nn.BatchNorm2d(64,affine=False)
-        self.norm32 = torch.nn.BatchNorm2d(32,affine=False)
-        self.norm16 = torch.nn.BatchNorm2d(16,affine=False)
-        self.norm8 = torch.nn.BatchNorm2d(8,affine=False)
-        self.norm4 = torch.nn.BatchNorm2d(4,affine=False)
+        self.convs = torch.nn.ModuleList([
+                torch.nn.Conv2d(3,64,3, stride=1),
+                torch.nn.Conv2d(64,64,3, stride=1),
+
+                torch.nn.Conv2d(64,128,3, stride=1),
+                torch.nn.Conv2d(128,128,3, stride=1),
+
+                torch.nn.Conv2d(128,256,3, stride=1),
+                torch.nn.Conv2d(256,256,3, stride=1),
+                torch.nn.Conv2d(256,256,3, stride=1),
+                torch.nn.Conv2d(256,256,3, stride=1),
+
+                torch.nn.Conv2d(256,512,3, stride=1),
+                torch.nn.Conv2d(512,512,3, stride=1),
+                torch.nn.Conv2d(512,512,3, stride=1),
+                torch.nn.Conv2d(512,512,3, stride=1),
+
+                torch.nn.Conv2d(512,512,3, stride=1),
+                torch.nn.Conv2d(512,512,3, stride=1),
+                torch.nn.Conv2d(512,512,3, stride=1),
+                torch.nn.Conv2d(512,512,3, stride=1),
+
+                torch.nn.Conv2d(512,256,3, stride=1),
+                torch.nn.Conv2d(256,256,3, stride=1),
+                torch.nn.Conv2d(256,256,3, stride=1),
+        ])
+
+        self.pool_after = {1,3,7,11,15,18}
+
+        self.fc1 = torch.nn.Linear(6144,6144)
+        self.fc2 = torch.nn.Linear(6144,2**5)
+
+
 
     def forward(self, image):
         debug("Input Data: ", image.shape)
 
-        image = self.conv1(image)
-        image = torch.nn.functional.relu(image)
-        PlotImages.plot_filters(image, title="Conv1")
-        debug(image.shape)
+        for i,conv in enumerate(self.convs):
+            image = conv(image)
+            image = torch.nn.functional.relu(image)
 
-        image = self.norm64(image)
+            if i in self.pool_after:
+                image = self.pool(image)
 
-        image = self.conv2(image)
-        image = torch.nn.functional.relu(image)
-        PlotImages.plot_filters(image, title="Conv2")
-        debug(image.shape)
-        
-        image = self.norm64(image)
+            # PlotImages.plot_filters(image, title="Conv%d"%(i+1))
+            debug(image.shape)
 
-        image = self.pool1(image)
-        PlotImages.plot_filters(image, title="Pool1")
-        debug(image.shape)
-
-        image = self.conv3(image)
-        image = torch.nn.functional.relu(image)
-        PlotImages.plot_filters(image, title="Conv3")
-        debug(image.shape)
-        
-        image = self.norm32(image)
-        
-        image = self.pool2(image)
-        PlotImages.plot_filters(image, title="Pool2")
-        debug(image.shape)
-        
-        image = self.conv4(image)
-        image = torch.nn.functional.relu(image)
-        PlotImages.plot_filters(image, title="Conv4")
-        debug(image.shape)
-
-        image = self.norm16(image)
-
-        image = self.pool3(image)
-        PlotImages.plot_filters(image, title="Pool3")
-        debug(image.shape)
-
-        image = self.conv5(image)
-        image = torch.nn.functional.relu(image)
-        PlotImages.plot_filters(image, title="Conv5")
-        debug(image.shape)
-        
-        image = self.norm8(image)
-
-        image = self.pool4(image)
-        PlotImages.plot_filters(image, title="Pool4")
-        debug(image.shape)
-
-        image = self.conv6(image)
-        image = torch.nn.functional.relu(image)
-        PlotImages.plot_filters(image, title="Conv6")
-        debug(image.shape)
-        
-        image = self.norm4(image)
-
-        image = self.pool5(image)
-        PlotImages.plot_filters(image, title="Pool5")
-        debug(image.shape)
-
-        image = image.view(image.shape[0], 84)
+        image = image.view(image.shape[0], 6144)
         debug(image.shape)
 
         image = self.fc1(image)
         image = torch.nn.functional.relu(image)
-        image = self.dropout(image)
-        debug(image.shape)
-        
-        image = self.fc2(image)
         debug(image.shape)
 
-        image = torch.nn.functional.softmax(image, dim=1)
+        image = self.fc2(image)
+        image = torch.nn.functional.relu(image)
+        debug(image.shape)
+
+        image = torch.nn.functional.softmax(image, dim=0)
         debug(image.shape)
 
         return image
 
 def loss_fn(output,label):
     out_cpu = output.cpu()
-
     abs_diff = torch.abs(label - out_cpu)
     return torch.sum(abs_diff)
 
@@ -215,23 +173,27 @@ def train(device):
 
 
 def main():
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    default_cuda_device = "cuda"
+    device = default_cuda_device if torch.cuda.is_available() else 'cpu'
     
     gc.collect()
-    if device == 'cuda':
+    if device == default_cuda_device:
         torch.cuda.empty_cache()
 
     debug(f"using: {device}")
 
-    # ---- FOR MANUAL TESTS ----- 
+    #---- FOR MANUAL TESTS ----- 
     # model = Model().to(device)
     # test = ImagesDataset(device, IMAGES_TRAIN)
     # test_loader = DataLoader(test, batch_size=1, shuffle=False)
+    # model.train(False)
     # model.eval()
     #
     # loader_iter = iter(test_loader)
     # image,label = next(loader_iter)
+    #
     # print(f"correct: {label}")
+    # model(image)
     # print(f"eval: {model(image)}")
 
     # ---- FOR TRAINING THE REAL MODEL ----
