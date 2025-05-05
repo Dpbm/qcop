@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 import gc
 import pandas as pd
 import numpy as np
@@ -35,82 +34,100 @@ class ImagesDataset(Dataset):
         label = torch.from_numpy(np.array(json.loads(self._dataset.loc[index]["result"]), dtype=np.float16)).to(self._device)
         return input_data, label
 
+class Downsample(torch.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(Downsample, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, 1, stride=2)
+        self.norm = nn.BatchNorm2d(out_channels)
+
+    def forward(self, residual):
+        residual = self.conv(residual)
+        residual = self.norm(residual)
+        return residual
+
+class Block(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, first_stride=1):
+        super(Block, self).__init__()
+
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, stride=first_stride, padding=1)
+        self.norm1 = nn.BatchNorm2d(out_channels)
+        
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, stride=1, padding=1)
+        self.norm2 = nn.BatchNorm2d(out_channels)
+
+        self.downsample = None if in_channels == out_channels else Downsample(in_channels, out_channels)
+
+    def forward(self, image):
+        residual = image if self.downsample is None else self.downsample(image)
+
+        image = self.conv1(image)
+        image = self.norm1(image)
+        image = F.relu(image)
+        
+        image = self.conv2(image)
+        image = self.norm2(image)
+        image += residual
+        image = F.relu(image)
+
+        return image
 
 class Model(torch.nn.Module):
     def __init__(self):
         super(Model, self).__init__()
         
+        self.conv1 = nn.Conv2d(3,64,7,stride=2)
+        self.pool1 = nn.MaxPool2d(2, stride=2)
+        self.pool2 = nn.AvgPool2d(3, stride=2)
+
+        self.out_neurons = 512*9*18
+        self.fc1 = nn.Linear(self.out_neurons, 32)
+
         # image shape: 3, 1324, 2631
+        self.blocks = nn.ModuleList([
+            Block(64,64),
+            Block(64,64),
+            Block(64,64),
 
+            Block(64,128,first_stride=2),
+            Block(128,128),
+            Block(128,128),
 
-        self.image_layers = nn.ModuleList([
-                nn.Conv2d(3,64,3, stride=1),
-                nn.Conv2d(64,64,3, stride=1),
-                nn.MaxPool2d(2, stride=2),
+            Block(128,256, first_stride=2),
+            Block(256,256),
+            Block(256,256),
 
-
-                nn.Conv2d(64,128,3, stride=1),
-                nn.Conv2d(128,128,3, stride=1),
-                nn.MaxPool2d(2, stride=2),
-
-                nn.Conv2d(128,256,3, stride=1),
-                nn.Conv2d(256,256,3, stride=1),
-                nn.Conv2d(256,256,3, stride=1),
-                nn.Conv2d(256,256,3, stride=1),
-                nn.MaxPool2d(2, stride=2),
-
-
-                nn.Conv2d(256,512,3, stride=1),
-                nn.Conv2d(512,512,3, stride=1),
-                nn.Conv2d(512,512,3, stride=1),
-                nn.Conv2d(512,512,3, stride=1),
-                nn.MaxPool2d(2, stride=2),
-
-
-                nn.Conv2d(512,256,3, stride=1),
-                nn.Conv2d(256,256,3, stride=1),
-                nn.Conv2d(256,256,3, stride=1),
-                nn.MaxPool2d(2, stride=2),
-
-                nn.Conv2d(256,128,3, stride=1),
-                nn.Conv2d(128,128,3, stride=1),
-                nn.Conv2d(128,128,3, stride=1),
-                nn.MaxPool2d(2, stride=2),
-
+            Block(256, 512, first_stride=2),
+            Block(512, 512),
+            Block(512, 512),
         ])
-
-        #self.pool_after = {1,3,7,11,15,18}
-
-        self.fc1 = nn.Linear(4608,4608)
-        self.fc2 = nn.Linear(4608,2**5)
-        self.dropout = nn.Dropout(p=0.7)
-
 
 
     def forward(self, image):
         debug("Input Data: %s"%(str(image.shape)))
 
-        for i,layer in enumerate(self.image_layers):
-            image = layer(image)
+        block_counter = 0
 
-            if isinstance(layer, nn.Conv2d):
-              image = F.relu(image)
+        image = F.relu(self.conv1(image))
+        image = self.pool1(image)
+        residual = image
+
+        debug(image.shape)
+
+        for i,layer in enumerate(self.blocks):
+            image = layer(image)
 
             # PlotImages.plot_filters(image, title="Conv%d"%(i+1))
             debug(image.shape)
 
-        image = image.view(image.shape[0], 4608)
+        image = self.pool2(image)
+        debug(image.shape)
+        
+        image = image.view(image.shape[0], self.out_neurons)
         debug(image.shape)
 
-        image = F.relu(self.fc1(image))
-        debug(image.shape)
-
-        image = self.dropout(image)
-
-        image = F.softmax(F.relu(self.fc2(image)), dim=0)
-        debug(image.shape)
-
-        return image
+        out = F.softmax(self.fc1(image), dim=1)
+        debug(out.shape)
+        return out
 
 def one_epoch(dataset, opt, model, loss_fn):
     total_loss = 0.0
@@ -149,7 +166,8 @@ def train(device):
     data_loader_test = DataLoader(test_data, batch_size=4, shuffle=False)
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
-    opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+    # opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+    opt = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=0.0001)
     best_loss = 1_000_000
 
     for epoch in range(EPOCHS):
@@ -188,28 +206,28 @@ def main():
     debug("using: %s"%(device))
 
     #---- FOR MANUAL TESTS ----- 
-    model = Model().to(device)
-    test = ImagesDataset(device, IMAGES_TRAIN)
-    test_loader = DataLoader(test, batch_size=1, shuffle=False)
-    model.train(False)
-    model.eval()
-
-    loader_iter = iter(test_loader)
-    image,label = next(loader_iter)
-
-    print(f"correct: {label}")
-    model(image)
+    # model = Model().to(device)
+    # test = ImagesDataset(device, IMAGES_TRAIN)
+    # test_loader = DataLoader(test, batch_size=1, shuffle=False)
+    # model.train(False)
+    # model.eval()
+    #
+    # loader_iter = iter(test_loader)
+    # image,label = next(loader_iter)
+    #
+    # print(f"correct: {label}")
+    # model(image)
     # print(f"eval: {model(image)}")
 
     # ---- FOR TRAINING THE REAL MODEL ----
-    # model = train(device)
-    # model.eval()
-    #
-    # ghz = torch.load("ghz.pt", map_location=device)
-    # ghz = ghz.to(torch.float32)
-    # result = model(torch.unsqueeze(ghz,0))
-    # print("ghz prediction: ", result)
-    # torch.save(result, "ghz-prediction.pt")
+    model = train(device)
+    model.eval()
+
+    ghz = torch.load("ghz.pt", map_location=device)
+    ghz = ghz.to(torch.float32)
+    result = model(torch.unsqueeze(ghz,0))
+    print("ghz prediction: ", result)
+    torch.save(result, "ghz-prediction.pt")
 
 if __name__ == "__main__":
     main()

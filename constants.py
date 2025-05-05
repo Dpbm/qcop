@@ -2,7 +2,7 @@ import os
 
 EPOCHS = 30
 
-DEBUG = True
+DEBUG = False
 
 SHOTS = 1000
 
