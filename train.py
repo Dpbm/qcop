@@ -105,11 +105,8 @@ class Model(torch.nn.Module):
     def forward(self, image):
         debug("Input Data: %s"%(str(image.shape)))
 
-        block_counter = 0
-
         image = F.relu(self.conv1(image))
         image = self.pool1(image)
-        residual = image
 
         debug(image.shape)
 
@@ -138,9 +135,10 @@ def one_epoch(dataset, opt, model, loss_fn):
 
         opt.zero_grad()
 
-        output = model(image)
+        output = torch.round(model(image), decimals=3)
+        # print("model output: %s"%(str(output)))
 
-        loss = loss_fn(output, label)
+        loss = loss_fn(output.log(), label)
         loss.backward()
 
         opt.step()
@@ -167,7 +165,7 @@ def train(device):
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
     # opt = torch.optim.Adam(model.parameters(), lr=1e-3)
-    opt = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=0.0001)
+    opt = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.8, weight_decay=0.00001)
     best_loss = 1_000_000
 
     for epoch in range(EPOCHS):
@@ -183,8 +181,9 @@ def train(device):
             for i, dataset in enumerate(data_loader_test):
                data, label = dataset
                output = model(data)
-               loss = loss_fn(output,label)
+               loss = loss_fn(output.log(),label)
                running_loss += loss
+
         avg_loss = running_loss/(i+1)
         print("AVG: %f"%(avg_loss))
 
