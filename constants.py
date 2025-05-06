@@ -1,6 +1,6 @@
 import os
 
-EPOCHS = 30
+EPOCHS = 100
 
 DEBUG = False
 

@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import gc
-import pandas as pd
+import torch.nn.functional as F 
+import gc 
+import pandas as pd 
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
@@ -11,7 +11,7 @@ import json
 import time
 
 
-from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS
+from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS, DEBUG
 from helpers import debug, PlotImages
 
 class ImagesDataset(Dataset):
@@ -121,12 +121,13 @@ class Model(torch.nn.Module):
         
         image = image.view(image.shape[0], self.out_neurons)
         debug(image.shape)
-
-        out = F.softmax(self.fc1(image), dim=1)
+        
+        out = self.fc1(image)
+        out = F.softmax(out, dim=1)
         debug(out.shape)
         return out
 
-def one_epoch(dataset, opt, model, loss_fn):
+def one_epoch(dataset, opt, model, loss_fn, scheduler):
     total_loss = 0.0
     last_loss = 0.0
 
@@ -142,6 +143,8 @@ def one_epoch(dataset, opt, model, loss_fn):
         loss.backward()
 
         opt.step()
+
+        scheduler.step()
 
         total_loss += loss.item()
         if i % 10 == 0:
@@ -159,20 +162,24 @@ def train(device):
 
     train_data = ImagesDataset(device, IMAGES_TRAIN)
     test_data = ImagesDataset(device, IMAGES_TEST)
-
-    data_loader_train = DataLoader(train_data, batch_size=4, shuffle=False)
-    data_loader_test = DataLoader(test_data, batch_size=4, shuffle=False)
+    
+    batch_size=4
+    data_loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=False)
+    data_loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
-    # opt = torch.optim.Adam(model.parameters(), lr=1e-3)
-    opt = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.8, weight_decay=0.00001)
+    lr = 0.1
+    opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, steps_per_epoch=len(data_loader_train), epochs=EPOCHS)
     best_loss = 1_000_000
 
     for epoch in range(EPOCHS):
         print("epoch: %d"%(epoch))
         model.train(True)
 
-        loss = one_epoch(data_loader_train, opt, model, loss_fn)
+        loss = one_epoch(data_loader_train, opt, model, loss_fn, scheduler)
+
+        print("opt learning rate: %s; scheduler last learning rate: %s"%(str(opt.param_groups[0]['lr']), str(scheduler.get_last_lr())))
 
         model.eval()
         
@@ -204,19 +211,24 @@ def main():
 
     debug("using: %s"%(device))
 
-    #---- FOR MANUAL TESTS ----- 
-    # model = Model().to(device)
-    # test = ImagesDataset(device, IMAGES_TRAIN)
-    # test_loader = DataLoader(test, batch_size=1, shuffle=False)
-    # model.train(False)
-    # model.eval()
-    #
-    # loader_iter = iter(test_loader)
-    # image,label = next(loader_iter)
-    #
-    # print(f"correct: {label}")
-    # model(image)
-    # print(f"eval: {model(image)}")
+    if DEBUG:
+        #---- FOR MANUAL TESTS ----- 
+        model = Model().to(device)
+        test = ImagesDataset(device, IMAGES_TRAIN)
+        test_loader = DataLoader(test, batch_size=1, shuffle=False)
+        model.train(False)
+        model.eval()
+
+        loader_iter = iter(test_loader)
+        image,label = next(loader_iter)
+
+        print(f"correct: {label}")
+        model(image)
+        print(f"eval: {model(image)}")
+
+        exit()
+
+
 
     # ---- FOR TRAINING THE REAL MODEL ----
     model = train(device)
