@@ -164,8 +164,8 @@ def train(device):
     test_data = ImagesDataset(device, IMAGES_TEST)
     
     batch_size=4
-    data_loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=False)
-    data_loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+    data_loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    data_loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
     lr = 0.1
