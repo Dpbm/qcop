@@ -3,7 +3,7 @@ clean-data:
 gen-dataset: python dataset.py 
 
 train: del-pred
-	python train.py
+	python train.py $(CHECKPOINT)
 
 del-pred:
 	rm -rf ghz-prediction.pt

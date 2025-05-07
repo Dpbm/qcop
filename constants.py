@@ -1,8 +1,8 @@
 import os
 
-EPOCHS = 100
+EPOCHS = 60
 
-DEBUG = False
+DEBUG = os.environ.get("DEBUG") or False
 
 SHOTS = 1000
 

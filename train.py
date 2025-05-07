@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F 
 import gc 
+import sys
 import pandas as pd 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,9 +11,9 @@ import h5py
 import json
 import time
 
-
 from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS, DEBUG
 from helpers import debug, PlotImages
+from colors import Colors
 
 class ImagesDataset(Dataset):
     def __init__(self, device, file):
@@ -137,7 +138,9 @@ def one_epoch(dataset, opt, model, loss_fn, scheduler):
         opt.zero_grad()
 
         output = torch.round(model(image), decimals=3)
-        # print("model output: %s"%(str(output)))
+
+        if DEBUG:
+            print("%smodel output: %s%S"%(colors.YELLOWFG, str(output), Colors.ENDC))
 
         loss = loss_fn(output.log(), label)
         loss.backward()
@@ -149,16 +152,27 @@ def one_epoch(dataset, opt, model, loss_fn, scheduler):
         total_loss += loss.item()
         if i % 10 == 0:
             last_loss = total_loss/10
-            print("batch %d loss %f"%(i, last_loss))
+            print("%sbatch %d loss %f%s"%(Colors.MAGENTAFG,i, last_loss,Colors.ENDC))
             total_loss = 0.0
 
     return last_loss
 
-
-def train(device):
-    print("running training")
+def get_model(device):
+    total_args = len(sys.argv)
+    checkpoint = sys.argv[-1] if total_args == 2 else None
 
     model = Model().to(device)
+    if checkpoint:
+        model.load_state_dict(torch.load(checkpoint, weights_only=True))
+
+    return model
+
+
+
+def train(device):
+    print("%sRunning Training%s"%(Colors.MAGENTABG, Colors.ENDC))
+
+    model = get_model(device)
 
     train_data = ImagesDataset(device, IMAGES_TRAIN)
     test_data = ImagesDataset(device, IMAGES_TEST)
@@ -174,12 +188,12 @@ def train(device):
     best_loss = 1_000_000
 
     for epoch in range(EPOCHS):
-        print("epoch: %d"%(epoch))
+        print("%sEpoch: %d%s"%(Colors.YELLOWFG, epoch, Colors.ENDC))
         model.train(True)
 
         loss = one_epoch(data_loader_train, opt, model, loss_fn, scheduler)
 
-        print("opt learning rate: %s; scheduler last learning rate: %s"%(str(opt.param_groups[0]['lr']), str(scheduler.get_last_lr())))
+        print("%sopt learning rate: %s; scheduler last learning rate: %s%s"%(Colors.YELLOWFG, str(opt.param_groups[0]['lr']), str(scheduler.get_last_lr()), Colors.ENDC))
 
         model.eval()
         
@@ -192,11 +206,11 @@ def train(device):
                running_loss += loss
 
         avg_loss = running_loss/(i+1)
-        print("AVG: %f"%(avg_loss))
+        print("%sAVG: %f%s"%(Colors.MAGENTAFG, avg_loss, Colors.ENDC))
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            best_model_weights_path = "model_%d"%(int(time.time()))
+            best_model_weights_path = "model_%s"%(time.ctime())
             torch.save(model.state_dict(), best_model_weights_path)
     return model
 
@@ -209,11 +223,11 @@ def main():
     if device == default_cuda_device:
         torch.cuda.empty_cache()
 
-    debug("using: %s"%(device))
+    print("%susing: %s%s"%(Colors.GREENBG, device, Colors.ENDC))
 
     if DEBUG:
         #---- FOR MANUAL TESTS ----- 
-        model = Model().to(device)
+        model = get_model(device)
         test = ImagesDataset(device, IMAGES_TRAIN)
         test_loader = DataLoader(test, batch_size=1, shuffle=False)
         model.train(False)
@@ -222,13 +236,11 @@ def main():
         loader_iter = iter(test_loader)
         image,label = next(loader_iter)
 
-        print(f"correct: {label}")
+        print("%scorrect: %s%s"%(Colors.GREENBG,str(label), Colors.ENDC))
         model(image)
-        print(f"eval: {model(image)}")
+        print("%seval: %s%s"%(Colors.GREENBG, str(model(image)), Colors.ENDC))
 
-        exit()
-
-
+        sys.exit(0)
 
     # ---- FOR TRAINING THE REAL MODEL ----
     model = train(device)
@@ -237,8 +249,11 @@ def main():
     ghz = torch.load("ghz.pt", map_location=device)
     ghz = ghz.to(torch.float32)
     result = model(torch.unsqueeze(ghz,0))
-    print("ghz prediction: ", result)
+    print("%sghz prediction: %s%s"%(Colors.GREENBG, str(result), Colors.ENDC))
     torch.save(result, "ghz-prediction.pt")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)
