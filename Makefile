@@ -1,6 +1,8 @@
 clean-data:
-	rm -rf dataset/ dataset.csv *.npy *.npz *.h5
-gen-dataset: python dataset.py 
+	rm -rf dataset/ dataset.csv *.h5
+
+gen-dataset: 
+	python dataset.py 
 
 train: del-pred
 	python train.py $(CHECKPOINT)

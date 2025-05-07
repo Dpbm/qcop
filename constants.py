@@ -13,7 +13,7 @@ MAX_DEPTH = 10
 
 TOTAL_THREADS = THREADS = 10
 
-DATASET_SIZE = 5000
+DATASET_SIZE = 10000
 DATASET_PATH = os.path.join('.', 'dataset')
 DATASET_FILE = "dataset.csv"
 IMAGES_TRAIN = "images_train.h5"
