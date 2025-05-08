@@ -18,3 +18,4 @@ dependencies:
       - torch
       - torchvision
       - h5py
+      - polars
