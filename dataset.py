@@ -1,5 +1,9 @@
 from typing import Dict, List, TypedDict
-from copy import deepcopy
+import os
+from multiprocessing.pool import Pool
+import hashlib
+import json
+from itertools import product
 
 from qiskit import QuantumCircuit
 from qiskit.circuit.random import random_circuit
@@ -8,20 +12,13 @@ from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
 from qiskit_aer import AerSimulator
 from qiskit_aer.primitives import Sampler
 
-
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-from multiprocessing.pool import Pool
 from tqdm import tqdm
 import polars as pl
-import hashlib
 from PIL import Image
 import torch 
 import h5py
-from math import floor
-import json
-from itertools import product
 
 from constants import *
 from image import transform_image
@@ -30,17 +27,18 @@ from colors import Colors
 Dist = Dict[int,float]
 States = List[int]
 class CircuitResult(TypedDict):
-    index:int
-    depth:int
-    file:str
-    result:str # JSON string
-    hash:str
+    index:pl.Series
+    depth:pl.Series
+    file:pl.Series
+    result:pl.Series # JSON string
+    hash:pl.Series
 
 
 def generate_circuit(depth:int, circuit_image_path:str, pm:StagedPassManager) -> QuantumCircuit:
     qc = random_circuit(N_QUBITS, depth)
     qc.measure_all()
     qc.draw('mpl', filename=circuit_image_path)
+    
 
     isa_qc = pm.run(qc)
     return isa_qc
@@ -50,35 +48,32 @@ def get_circuit_results(qc:QuantumCircuit, sampler:Sampler) -> Dist:
 
 def fix_dist_gaps(dist:Dist, states:States):
     for state in states:
-        result_value = result.get(state)
+        result_value = dist.get(state)
         if result_value is None:
             dist[state] = 0
 
-def generate_image(index:int, depth:int, pm:StagedPassManager, sampler:Sampler, states:States, image_path:str) -> CircuitResult:
-    print("%sGenerating circuit image: %d%s"%(Colors.MAGENTAFG,index,Colors.ENDC))
-
-    isa_qc = generate_circuit(depth, image_path)
+def generate_image(index:int, depth:int, states:States, image_path:str) -> CircuitResult:
+    sim = AerSimulator()
+    pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
+    isa_qc = generate_circuit(depth, image_path, pm)
 
     with open(image_path, "rb") as file:
         file_hash = hashlib.md5(file.read()).hexdigest()
-    
+
+    sampler = Sampler()
     result = get_circuit_results(isa_qc, sampler)
     fix_dist_gaps(result, states)
    
     return {
-        "index":index,
-        "depth":depth,
-        "file": filename,
-        "result": json.dumps(list(result.values())),
-        "hash": file_hash,
+        "index": pl.Series("index", [index], dtype=pl.UInt16),
+        "depth":pl.Series("depth", [depth], dtype=pl.UInt8),
+        "file": pl.Series("file", [image_path], dtype=pl.String),
+        "result": pl.Series("result", [json.dumps(list(result.values()))], dtype=pl.String),
+        "hash": pl.Series("hash", [file_hash], dtype=pl.String)
     }
 
 def generate_images() -> pl.DataFrame:
     df = pl.DataFrame(schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String})
-
-    sim = AerSimulator()
-    pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
-    sampler = Sampler()
 
     bitstrings_to_int = [ int(''.join(comb), 2) for comb in product('01', repeat=N_QUBITS) ]
 
@@ -92,10 +87,10 @@ def generate_images() -> pl.DataFrame:
             for i in range(TOTAL_THREADS):
                 depth = np.random.randint(MIN_DEPTH, MAX_DEPTH)
 
-                filename = '{}-{}.jpeg'%(index,depth)
+                filename = '%d-%d.jpeg'%(index,depth)
                 circuit_image_path = os.path.join(DATASET_PATH, filename)
 
-                args.append((index, depth, deepcopy(pm), deepcopy(sampler), bitstrings_to_int, circuit_image_path))
+                args.append((index, depth, bitstrings_to_int, circuit_image_path))
                 index += 1
 
             with Pool(processes=TOTAL_THREADS) as pool:
@@ -164,4 +159,7 @@ def main():
     
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)
