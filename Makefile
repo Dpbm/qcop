@@ -1,18 +1,24 @@
-clean-data:
+clean-all: clean-dataset clean-pred clean-ghz clean-checkpoints
+
+clean-dataset:
 	rm -rf dataset/ dataset.csv *.h5
+
+clean-pred:
+	rm -rf ghz-prediction.pt
+
+clean-ghz:
+	rm -rf ghz.pt ghz.jpeg
+
+clean-checkpoints:
+	rm -rf model_*
 
 gen-dataset: 
 	python dataset.py 
 
-train: del-pred
+train: 
 	python train.py $(CHECKPOINT)
 
-del-pred:
-	rm -rf ghz-prediction.pt
 
-ghz: del-pred
-	rm -rf ghz.jpeg
+ghz: clean-ghz
 	python ghz.py
 
-del-model:
-	rm -rf model_*
