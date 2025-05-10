@@ -111,7 +111,7 @@ def remove_duplicated_files(df:pl.DataFrame) -> pl.DataFrame:
     duplicated_values = df.filter(~pl.col("index").is_in(clean_df_indexes))
 
     print("%sDeleting duplicated files%s"%(Colors.GREENBG, Colors.ENDC))
-    for row in tqdm(pl.iter_rows(named=True)):
+    for row in tqdm(duplicated_values.iter_rows(named=True)):
         file = row["file"]
         os.remove(file)
 
@@ -153,9 +153,9 @@ def main():
     df = generate_images()
     df = remove_duplicated_files(df)
 
-    df.write_csv(DATASET_PATH)    
+    df.write_csv(DATASET_FILE)    
 
-    transform_images()
+    transform_images(df)
     
 
 if __name__ == "__main__":
