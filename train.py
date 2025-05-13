@@ -3,21 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F 
 import gc 
 import sys
-import pandas as pd 
+import polars as pl 
 import numpy as np
-import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 import h5py
 import json
 import time
 
-from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS, DEBUG
+from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS, DEBUG, BATCH_SIZE
 from helpers import debug, PlotImages
 from colors import Colors
 
 class ImagesDataset(Dataset):
     def __init__(self, device, file):
-        self._dataset = pd.read_csv(DATASET_FILE)
+        self._dataset = pl.read_csv(DATASET_FILE)
         self._obj = h5py.File(file, "r")
         self._total = len(self._obj)
         self._device = device
@@ -32,7 +31,7 @@ class ImagesDataset(Dataset):
 
     def __getitem__(self, index):
         input_data = self._to_tensor(self._obj[f"{index}"][()])
-        label = torch.from_numpy(np.array(json.loads(self._dataset.loc[index]["result"]), dtype=np.float16)).to(self._device)
+        label = torch.from_numpy(np.array(json.loads(self._dataset.row(index, named=True)["result"]), dtype=np.float16)).to(self._device)
         return input_data, label
 
 class Downsample(torch.nn.Module):
@@ -114,7 +113,7 @@ class Model(torch.nn.Module):
         for i,layer in enumerate(self.blocks):
             image = layer(image)
 
-            # PlotImages.plot_filters(image, title="Conv%d"%(i+1))
+            PlotImages.plot_filters(image, title="Conv%d"%(i+1))
             debug(image.shape)
 
         image = self.pool2(image)
@@ -150,8 +149,9 @@ def one_epoch(dataset, opt, model, loss_fn, scheduler):
         scheduler.step()
 
         total_loss += loss.item()
-        if i % 10 == 0:
-            last_loss = total_loss/10
+        total_loss_steps = 50
+        if i > 0 and i % total_loss_steps == 0:
+            last_loss = total_loss/total_loss_steps
             print("%sbatch %d loss %f%s"%(Colors.MAGENTAFG,i, last_loss,Colors.ENDC))
             total_loss = 0.0
 
@@ -177,9 +177,8 @@ def train(device):
     train_data = ImagesDataset(device, IMAGES_TRAIN)
     test_data = ImagesDataset(device, IMAGES_TEST)
     
-    batch_size=4
-    data_loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-    data_loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True)
+    data_loader_train = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
+    data_loader_test = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
     lr = 0.1

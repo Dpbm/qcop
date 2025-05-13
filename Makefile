@@ -1,7 +1,7 @@
 clean-all: clean-dataset clean-pred clean-ghz clean-checkpoints
 
 clean-dataset:
-	rm -rf dataset/ dataset.csv *.h5
+	rm -rf dataset/ dataset.csv *.h5 dataset-images.zip
 
 clean-pred:
 	rm -rf ghz-prediction.pt

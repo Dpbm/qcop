@@ -1,4 +1,4 @@
-from typing import Dict, List, TypedDict
+from typing import Dict, List, TypedDict, Tuple
 import os 
 from multiprocessing.pool import Pool
 import hashlib
@@ -6,7 +6,6 @@ import json
 from itertools import product
 
 from qiskit import QuantumCircuit
-from qiskit.circuit.random import random_circuit
 from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
 
 from qiskit_aer import AerSimulator
@@ -23,6 +22,7 @@ import h5py
 from constants import *
 from image import transform_image
 from colors import Colors
+from random_circuit import get_random_circuit
 
 Dist = Dict[int,float]
 States = List[int]
@@ -34,14 +34,15 @@ class CircuitResult(TypedDict):
     hash:pl.Series
 
 
-def generate_circuit(depth:int, circuit_image_path:str, pm:StagedPassManager) -> QuantumCircuit:
-    qc = random_circuit(N_QUBITS, depth)
+def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[QuantumCircuit, int]:
+    qc = get_random_circuit()
     qc.measure_all()
     qc.draw('mpl', filename=circuit_image_path)
-    
+
+    depth = qc.depth() 
 
     isa_qc = pm.run(qc)
-    return isa_qc
+    return isa_qc, depth
 
 def get_circuit_results(qc:QuantumCircuit, sampler:Sampler) -> Dist:
     return sampler.run([qc], shots=SHOTS).result().quasi_dists[0]
@@ -52,10 +53,10 @@ def fix_dist_gaps(dist:Dist, states:States):
         if result_value is None:
             dist[state] = 0
 
-def generate_image(index:int, depth:int, states:States, image_path:str) -> CircuitResult:
+def generate_image(index:int, states:States, image_path:str) -> CircuitResult:
     sim = AerSimulator()
     pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
-    isa_qc = generate_circuit(depth, image_path, pm)
+    isa_qc,depth = generate_circuit(image_path, pm)
 
     with open(image_path, "rb") as file:
         file_hash = hashlib.md5(file.read()).hexdigest()
@@ -85,12 +86,10 @@ def generate_images() -> pl.DataFrame:
             args = []
 
             for i in range(TOTAL_THREADS):
-                depth = np.random.randint(MIN_DEPTH, MAX_DEPTH)
-
                 filename = '%d-%d.jpeg'%(index,depth)
                 circuit_image_path = os.path.join(DATASET_PATH, filename)
 
-                args.append((index, depth, bitstrings_to_int, circuit_image_path))
+                args.append((index, bitstrings_to_int, circuit_image_path))
                 index += 1
 
             with Pool(processes=TOTAL_THREADS) as pool:
@@ -134,9 +133,9 @@ def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
 
     train_rows = df.head(total_rows_training)
     test_rows = df.tail(total_rows_test)
-    image_i = 0
 
     for rows, h5_file in zip((train_rows, test_rows), (images_train, images_test)):
+        image_i = 0
         for row in tqdm(rows.iter_rows(named=True)):
             image_path = row["file"]
             with Image.open(image_path) as img:
@@ -149,10 +148,10 @@ def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
 
 def main():
     os.makedirs(DATASET_PATH, exist_ok=True)
-
+    
     df = generate_images()
     df = remove_duplicated_files(df)
-
+    
     df.write_csv(DATASET_FILE)    
 
     transform_images(df)
