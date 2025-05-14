@@ -36,8 +36,15 @@ class CircuitResult(TypedDict):
 
 def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[QuantumCircuit, int]:
     qc = get_random_circuit()
-    qc.measure_all()
+    measure_before = np.random.randint(0,1)
+    
+    if measure_before:
+        qc.measure_all()
+
     qc.draw('mpl', filename=circuit_image_path)
+
+    if not measure_before:
+        qc.measure_all()
 
     depth = qc.depth() 
 
@@ -86,7 +93,7 @@ def generate_images() -> pl.DataFrame:
             args = []
 
             for i in range(TOTAL_THREADS):
-                filename = '%d-%d.jpeg'%(index,depth)
+                filename = '%d.jpeg'%(index)
                 circuit_image_path = os.path.join(DATASET_PATH, filename)
 
                 args.append((index, bitstrings_to_int, circuit_image_path))
