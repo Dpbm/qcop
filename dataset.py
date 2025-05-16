@@ -37,7 +37,7 @@ class CircuitResult(TypedDict):
 
 def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[QuantumCircuit, int, bool]:
     qc = get_random_circuit()
-    measure_before = bool(np.random.randint(0,1))
+    measure_before = bool(np.random.randint(0,2))
     
     if measure_before:
         qc.measure_all()

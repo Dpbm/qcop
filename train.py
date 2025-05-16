@@ -145,16 +145,18 @@ class Model(torch.nn.Module):
 class Checkpoint:
     def __init__(self, path:Optional[str]):
         self._path = path
-        self._data = None
+        self._data = {}
 
     def load(self):
         if self._path is None:
             print("%sNo Checkpoint was provided!%s"%(Colors.YELLOWFG,Colors.ENDC))
+            return
+
         print("%sLoading checkpoint from: %s...%s"%(Colors.MAGENTABG, self._path, Colors.ENDC))
         self._data = torch.load(self._path)
 
     @property
-    def model(self) -> Optinal[Dict]:
+    def model(self) -> Optional[Dict]:
         return self._data.get("model")
 
     @property
@@ -216,7 +218,7 @@ def one_epoch(dataset, opt, model, loss_fn, scheduler):
 def get_model(device, checkpoint=None):
     model = Model().to(device)
     if checkpoint:
-        model.load_state_dict(torch.load(checkpoint, weights_only=True))
+        model.load_state_dict(checkpoint)
 
     return model
 
@@ -244,7 +246,7 @@ def train(device,checkpoint:Checkpoint):
     if checkpoint.scheduler:
         scheduler.load_state_dict(checkpoint.scheduler)
 
-    for epoch in range(checkpoint.epoch, EPOCHS):
+    for epoch in range(checkpoint.epoch+1, EPOCHS):
         print("%sEpoch: %d%s"%(Colors.YELLOWFG, epoch, Colors.ENDC))
         model.train(True)
 
