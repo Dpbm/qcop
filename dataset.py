@@ -27,16 +27,17 @@ from random_circuit import get_random_circuit
 Dist = Dict[int,float]
 States = List[int]
 class CircuitResult(TypedDict):
-    index:pl.Series
-    depth:pl.Series
-    file:pl.Series
+    index:pl.Series #int
+    depth:pl.Series #int
+    file:pl.Series #string
+    measure:pl.Series #bool
     result:pl.Series # JSON string
-    hash:pl.Series
+    hash:pl.Series #string
 
 
-def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[QuantumCircuit, int]:
+def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[QuantumCircuit, int, bool]:
     qc = get_random_circuit()
-    measure_before = np.random.randint(0,1)
+    measure_before = bool(np.random.randint(0,1))
     
     if measure_before:
         qc.measure_all()
@@ -49,7 +50,7 @@ def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[Quan
     depth = qc.depth() 
 
     isa_qc = pm.run(qc)
-    return isa_qc, depth
+    return isa_qc, depth, measure_before
 
 def get_circuit_results(qc:QuantumCircuit, sampler:Sampler) -> Dist:
     return sampler.run([qc], shots=SHOTS).result().quasi_dists[0]
@@ -63,7 +64,7 @@ def fix_dist_gaps(dist:Dist, states:States):
 def generate_image(index:int, states:States, image_path:str) -> CircuitResult:
     sim = AerSimulator()
     pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
-    isa_qc,depth = generate_circuit(image_path, pm)
+    isa_qc,depth,measure = generate_circuit(image_path, pm)
 
     with open(image_path, "rb") as file:
         file_hash = hashlib.md5(file.read()).hexdigest()
@@ -77,11 +78,12 @@ def generate_image(index:int, states:States, image_path:str) -> CircuitResult:
         "depth":pl.Series("depth", [depth], dtype=pl.UInt8),
         "file": pl.Series("file", [image_path], dtype=pl.String),
         "result": pl.Series("result", [json.dumps(list(result.values()))], dtype=pl.String),
-        "hash": pl.Series("hash", [file_hash], dtype=pl.String)
+        "hash": pl.Series("hash", [file_hash], dtype=pl.String),
+        "measure": pl.Series("measure", [measure], dtype=pl.Boolean)
     }
 
 def generate_images() -> pl.DataFrame:
-    df = pl.DataFrame(schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String})
+    df = pl.DataFrame(schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String, "measure":pl.Boolean})
 
     bitstrings_to_int = [ int(''.join(comb), 2) for comb in product('01', repeat=N_QUBITS) ]
 
@@ -128,7 +130,7 @@ def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
     print("%sTransforming images%s"%(Colors.GREENBG,Colors.ENDC))
     print("%s%f For Training%s"%(Colors.YELLOWFG,percentage_train*100,Colors.ENDC))
 
-    max_width,max_height = new_dim
+    max_width,max_height = NEW_DIM
 
     total_rows_training = int(len(df)*percentage_train)
     total_rows_test = len(df)-total_rows_training
@@ -155,10 +157,10 @@ def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
 
 def main():
     os.makedirs(DATASET_PATH, exist_ok=True)
-    
+
     df = generate_images()
     df = remove_duplicated_files(df)
-    
+
     df.write_csv(DATASET_FILE)    
 
     transform_images(df)

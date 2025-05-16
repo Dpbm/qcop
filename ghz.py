@@ -4,8 +4,7 @@ from PIL import Image
 import torch
 
 from image import transform_image
-
-image_file = "ghz.jpeg"
+from constants import GHZ_FILE, GHZ_IMAGE_FILE
 
 qc = QuantumCircuit(5)
 qc.h(0)
@@ -15,9 +14,9 @@ qc.cx(2,3)
 qc.cx(3,4)
 qc.measure_all()
 
-qc.draw('mpl', filename=image_file)
+qc.draw('mpl', filename=GHZ_IMAGE_FILE)
 
 
 with Image.open(image_file) as file:
    tensor = transform_image(file)
-   torch.save(tensor, "ghz.pt")
+   torch.save(tensor, GHZ_FILE)

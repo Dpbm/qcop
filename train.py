@@ -1,3 +1,4 @@
+from typing import Dict, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
@@ -10,7 +11,17 @@ import h5py
 import json
 import time
 
-from constants import IMAGES_TRAIN, IMAGES_TEST, DATASET_PATH, DATASET_FILE, EPOCHS, DEBUG, BATCH_SIZE
+from constants import (
+    IMAGES_TRAIN, 
+    IMAGES_TEST, 
+    DATASET_PATH, 
+    DATASET_FILE, 
+    EPOCHS, 
+    DEBUG, 
+    BATCH_SIZE,
+    GHZ_FILE,
+    GHZ_PRED_FILE
+)
 from helpers import debug, PlotImages
 from colors import Colors
 
@@ -127,6 +138,51 @@ class Model(torch.nn.Module):
         debug(out.shape)
         return out
 
+    def save(self):
+        path = "model_%s"%(time.ctime())
+        torch.save(self.state_dict(), path)
+
+class Checkpoint:
+    def __init__(self, path:Optional[str]):
+        self._path = path
+        self._data = None
+
+    def load(self):
+        if self._path is None:
+            print("%sNo Checkpoint was provided!%s"%(Colors.YELLOWFG,Colors.ENDC))
+        print("%sLoading checkpoint from: %s...%s"%(Colors.MAGENTABG, self._path, Colors.ENDC))
+        self._data = torch.load(self._path)
+
+    @property
+    def model(self) -> Optinal[Dict]:
+        return self._data.get("model")
+
+    @property
+    def optimizer(self) -> Optional[Dict]:
+        return self._data.get("optimizer")
+
+    @property
+    def scheduler(self) -> Optional[Dict]:
+        return self._data.get("scheduler")
+
+    @property
+    def epoch(self) -> int:
+        return self._data.get("epoch") or 0
+
+    @staticmethod
+    def save(epoch:int, model:Dict, optimizer:Dict, scheduler:Dict):
+        path = "checkpoint_%s.pth"%(time.ctime())
+        print("%sSaving checkpoint at: %s...%s"%(Colors.MAGENTABG,path,Colors.ENDC))
+        checkpoint = {
+            'epoch': epoch,
+            'model': model,
+            'optimizer': optimizer,
+            'scheduler': scheduler
+        }
+        torch.save(checkpoint, path)
+
+
+
 def one_epoch(dataset, opt, model, loss_fn, scheduler):
     total_loss = 0.0
     last_loss = 0.0
@@ -157,10 +213,7 @@ def one_epoch(dataset, opt, model, loss_fn, scheduler):
 
     return last_loss
 
-def get_model(device):
-    total_args = len(sys.argv)
-    checkpoint = sys.argv[-1] if total_args == 2 else None
-
+def get_model(device, checkpoint=None):
     model = Model().to(device)
     if checkpoint:
         model.load_state_dict(torch.load(checkpoint, weights_only=True))
@@ -168,11 +221,10 @@ def get_model(device):
     return model
 
 
-
-def train(device):
+def train(device,checkpoint:Checkpoint):
     print("%sRunning Training%s"%(Colors.MAGENTABG, Colors.ENDC))
 
-    model = get_model(device)
+    model = get_model(device, checkpoint.model)
 
     train_data = ImagesDataset(device, IMAGES_TRAIN)
     test_data = ImagesDataset(device, IMAGES_TEST)
@@ -186,7 +238,13 @@ def train(device):
     scheduler = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, steps_per_epoch=len(data_loader_train), epochs=EPOCHS)
     best_loss = 1_000_000
 
-    for epoch in range(EPOCHS):
+
+    if checkpoint.optimizer:
+        opt.load_state_dict(checkpoint.optimizer)
+    if checkpoint.scheduler:
+        scheduler.load_state_dict(checkpoint.scheduler)
+
+    for epoch in range(checkpoint.epoch, EPOCHS):
         print("%sEpoch: %d%s"%(Colors.YELLOWFG, epoch, Colors.ENDC))
         model.train(True)
 
@@ -209,14 +267,24 @@ def train(device):
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            best_model_weights_path = "model_%s"%(time.ctime())
-            torch.save(model.state_dict(), best_model_weights_path)
+            Checkpoint.save(
+                epoch,
+                model.state_dict(),
+                opt.state_dict(),
+                scheduler.state_dict()
+            )
     return model
 
 
 def main():
     default_cuda_device = "cuda"
     device = default_cuda_device if torch.cuda.is_available() else 'cpu'
+    
+    total_args = len(sys.argv)
+    checkpoint_path = sys.argv[-1] if total_args == 2 else None
+
+    checkpoint = Checkpoint(checkpoint_path)
+    checkpoint.load()
     
     gc.collect()
     if device == default_cuda_device:
@@ -226,7 +294,7 @@ def main():
 
     if DEBUG:
         #---- FOR MANUAL TESTS ----- 
-        model = get_model(device)
+        model = get_model(device, checkpoint.model)
         test = ImagesDataset(device, IMAGES_TRAIN)
         test_loader = DataLoader(test, batch_size=1, shuffle=False)
         model.train(False)
@@ -242,14 +310,15 @@ def main():
         sys.exit(0)
 
     # ---- FOR TRAINING THE REAL MODEL ----
-    model = train(device)
+    model = train(device,checkpoint)
+    model.save()
     model.eval()
 
-    ghz = torch.load("ghz.pt", map_location=device)
+    ghz = torch.load(GHZ_FILE, map_location=device)
     ghz = ghz.to(torch.float32)
     result = model(torch.unsqueeze(ghz,0))
     print("%sghz prediction: %s%s"%(Colors.GREENBG, str(result), Colors.ENDC))
-    torch.save(result, "ghz-prediction.pt")
+    torch.save(result, GHZ_PRED_FILE)
 
 if __name__ == "__main__":
     try:
