@@ -1,3 +1,5 @@
+"""Constant values"""
+
 import os
 
 EPOCHS = 80

@@ -1,15 +1,20 @@
-from typing import Dict, Optional
+"""Train ResNet based model."""
+
+from typing import Optional, Tuple
+from collections import OrderedDict
+import gc 
+import sys
+import json
+import time
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
-import gc 
-import sys
+from torch.utils.data import Dataset, DataLoader
+
 import polars as pl 
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
 import h5py
-import json
-import time
 
 from constants import (
     IMAGES_TRAIN, 
@@ -25,39 +30,58 @@ from constants import (
 from helpers import debug, PlotImages
 from colors import Colors
 
+StateDict = OrderedDict
+Device = str
+FilePath = str
+Channels = int
+
 class ImagesDataset(Dataset):
-    def __init__(self, device, file):
-        self._dataset = pl.read_csv(DATASET_FILE)
+    """Dataset class for handling batches and data itself"""
+
+    def __init__(self, device:Device, file:FilePath, dataset_file:FilePath):
+        self._dataset = pl.read_csv(dataset_file)
         self._obj = h5py.File(file, "r")
         self._total = len(self._obj)
         self._device = device
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """return the amount of files"""
         return self._total
 
-    def _to_tensor(self,loaded_file):
+    def _to_tensor(self, loaded_file:np.array) -> torch.Tensor:
+        """auxiliary method to map an np.array to tensor in the correct device and data type"""
+
         data = loaded_file.astype(np.float32)
         # data = np.moveaxis(data, -1, 0) # only if the image has 3 channels per pixel instead of 3 distinct channels
         return torch.from_numpy(data).to(self._device)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index:int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Get an especific value inside the dataset with its label"""
         input_data = self._to_tensor(self._obj[f"{index}"][()])
         label = torch.from_numpy(np.array(json.loads(self._dataset.row(index, named=True)["result"]), dtype=np.float16)).to(self._device)
         return input_data, label
 
 class Downsample(torch.nn.Module):
-    def __init__(self, in_channels, out_channels):
+    """
+    Downsample block. Used to normalize the output of a block to the input of the next block. 
+    Useful when two blocks  have different input channels
+    """
+
+    def __init__(self, in_channels:Channels, out_channels:Channels):
         super(Downsample, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, 1, stride=2)
         self.norm = nn.BatchNorm2d(out_channels)
 
-    def forward(self, residual):
+    def forward(self, residual:torch.Tensor):
+        """Apply the normalization method"""
         residual = self.conv(residual)
         residual = self.norm(residual)
         return residual
 
 class Block(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, first_stride=1):
+    """A ResNet block"""
+
+    def __init__(self, in_channels:Channels, out_channels:Channels, first_stride:int=1):
         super(Block, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels, out_channels, 3, stride=first_stride, padding=1)
@@ -68,7 +92,8 @@ class Block(torch.nn.Module):
 
         self.downsample = None if in_channels == out_channels else Downsample(in_channels, out_channels)
 
-    def forward(self, image):
+    def forward(self, image:torch.Tensor) -> torch.Tensor:
+        """Apply block transformations on the current image"""
         residual = image if self.downsample is None else self.downsample(image)
 
         image = self.conv1(image)
@@ -83,6 +108,8 @@ class Block(torch.nn.Module):
         return image
 
 class Model(torch.nn.Module):
+    """The model architecture itself"""
+
     def __init__(self):
         super(Model, self).__init__()
         
@@ -93,7 +120,6 @@ class Model(torch.nn.Module):
         self.out_neurons = 512*9*18
         self.fc1 = nn.Linear(self.out_neurons, 32)
 
-        # image shape: 3, 1324, 2631
         self.blocks = nn.ModuleList([
             Block(64,64),
             Block(64,64),
@@ -113,7 +139,9 @@ class Model(torch.nn.Module):
         ])
 
 
-    def forward(self, image):
+    def forward(self, image:torch.Tensor) -> torch.Tensor:
+        """Apply all transformations onto the input image"""
+
         debug("Input Data: %s"%(str(image.shape)))
 
         image = F.relu(self.conv1(image))
@@ -139,15 +167,19 @@ class Model(torch.nn.Module):
         return out
 
     def save(self):
+        """Save model weights."""
         path = "model_%s"%(time.ctime())
         torch.save(self.state_dict(), path)
 
 class Checkpoint:
-    def __init__(self, path:Optional[str]):
+    """An auxiliary class to handle checkpoints"""
+
+    def __init__(self, path:Optional[FilePath]):
         self._path = path
         self._data = {}
 
     def load(self):
+        """Load check point if a path was provided"""
         if self._path is None:
             print("%sNo Checkpoint was provided!%s"%(Colors.YELLOWFG,Colors.ENDC))
             return
@@ -156,23 +188,28 @@ class Checkpoint:
         self._data = torch.load(self._path)
 
     @property
-    def model(self) -> Optional[Dict]:
+    def model(self) -> Optional[StateDict]:
+        """return the model weights"""
         return self._data.get("model")
 
     @property
-    def optimizer(self) -> Optional[Dict]:
+    def optimizer(self) -> Optional[StateDict]:
+        """Get optimizer parameters"""
         return self._data.get("optimizer")
 
     @property
-    def scheduler(self) -> Optional[Dict]:
+    def scheduler(self) -> Optional[StateDict]:
+        """Get Scheduler parameters"""
         return self._data.get("scheduler")
 
     @property
     def epoch(self) -> int:
+        """Get checkpoint epoch"""
         return self._data.get("epoch") or 0
 
     @staticmethod
-    def save(epoch:int, model:Dict, optimizer:Dict, scheduler:Dict):
+    def save(epoch:int, model:StateDict, optimizer:StateDict, scheduler:StateDict):
+        """Save checkpoint data"""
         path = "checkpoint_%s.pth"%(time.ctime())
         print("%sSaving checkpoint at: %s...%s"%(Colors.MAGENTABG,path,Colors.ENDC))
         checkpoint = {
@@ -185,7 +222,14 @@ class Checkpoint:
 
 
 
-def one_epoch(dataset, opt, model, loss_fn, scheduler):
+def one_epoch(
+    dataset:DataLoader, 
+    opt:torch.optim.Optimizer, 
+    model:Model, 
+    loss_fn:nn.modules.loss._Loss, 
+    scheduler:torch.optim.lr_scheduler.LRScheduler):
+    """Run one epoch on data"""
+
     total_loss = 0.0
     last_loss = 0.0
 
@@ -199,11 +243,11 @@ def one_epoch(dataset, opt, model, loss_fn, scheduler):
         if DEBUG:
             print("%smodel output: %s%S"%(colors.YELLOWFG, str(output), Colors.ENDC))
 
-        loss = loss_fn(output.log(), label)
+        loss = loss_fn(output.log(), label) # the loss function requires our data to be in log format
+
         loss.backward()
 
         opt.step()
-
         scheduler.step()
 
         total_loss += loss.item()
@@ -215,21 +259,28 @@ def one_epoch(dataset, opt, model, loss_fn, scheduler):
 
     return last_loss
 
-def get_model(device, checkpoint=None):
+def get_model(device:Device, state:StateDict=None):
+    """
+    Prepare model. 
+    It creates a model, load into a given device and load weights if a state
+    was provided.
+    """
     model = Model().to(device)
-    if checkpoint:
-        model.load_state_dict(checkpoint)
+    if state:
+        model.load_state_dict(state)
 
     return model
 
 
-def train(device,checkpoint:Checkpoint):
+def train(device:Device, checkpoint:Checkpoint):
+    """Train model"""
+
     print("%sRunning Training%s"%(Colors.MAGENTABG, Colors.ENDC))
 
     model = get_model(device, checkpoint.model)
 
-    train_data = ImagesDataset(device, IMAGES_TRAIN)
-    test_data = ImagesDataset(device, IMAGES_TEST)
+    train_data = ImagesDataset(device, IMAGES_TRAIN, DATASET_FILE)
+    test_data = ImagesDataset(device, IMAGES_TEST, DATASET_FILE)
     
     data_loader_train = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
     data_loader_test = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -279,6 +330,10 @@ def train(device,checkpoint:Checkpoint):
 
 
 def main():
+    """
+    Setup environment and start experiments.
+    """
+
     default_cuda_device = "cuda"
     device = default_cuda_device if torch.cuda.is_available() else 'cpu'
     
@@ -297,7 +352,7 @@ def main():
     if DEBUG:
         #---- FOR MANUAL TESTS ----- 
         model = get_model(device, checkpoint.model)
-        test = ImagesDataset(device, IMAGES_TRAIN)
+        test = ImagesDataset(device, IMAGES_TRAIN, DATASET_FILE)
         test_loader = DataLoader(test, batch_size=1, shuffle=False)
         model.train(False)
         model.eval()

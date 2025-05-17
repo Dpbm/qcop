@@ -1,6 +1,9 @@
+"""Generate random circuits by hand"""
+
 import random
 from math import pi
 from abc import ABC, abstractclassmethod
+
 from qiskit import QuantumCircuit
 from qiskit.circuit import Gate as QiskitGate
 from qiskit.circuit.library import (
@@ -18,15 +21,16 @@ from qiskit.circuit.library import (
 )
 
 
-from constants import MAX_TOTAL_GATES, N_QUBITS
-
-
 class Gate(ABC):
+    """interface for gates"""
+
     @abstractclassmethod
     def get_random_gate(cls) -> QiskitGate:
         pass
 
 class SingleQubitGate(Gate):
+    """Handle single qubit gates"""
+
     rotation_gates = [
         RXGate,
         RZGate,
@@ -44,6 +48,7 @@ class SingleQubitGate(Gate):
 
     @classmethod
     def get_random_gate(cls) -> QiskitGate:
+        """Return an instance of a single qubit gate ready to use"""
         gate = random.choice(cls.all_gates)
 
         if gate in cls.rotation_gates:
@@ -53,6 +58,8 @@ class SingleQubitGate(Gate):
         return gate()
 
 class MultiQubitGate(Gate):
+    """Handle multi qubit gates"""
+
     gates = [
         CXGate,
         CZGate
@@ -60,26 +67,28 @@ class MultiQubitGate(Gate):
 
     @classmethod
     def get_random_gate(cls) -> QiskitGate:
+        """Return an instance of a multi-qubit gate ready to use"""
         gate = random.choice(cls.gates)
         return gate()
 
 
 
-def get_random_circuit() -> QuantumCircuit:
-    total_gates = random.randint(0,MAX_TOTAL_GATES)
+def get_random_circuit(n_qubits:int, total_gates:int) -> QuantumCircuit:
+    """Generate a random circuit based on the amount of qubits and gates."""
+    total_gates = random.randint(0,total_gates)
 
-    qc = QuantumCircuit(N_QUBITS)
+    qc = QuantumCircuit(n_qubits)
     
     for _ in range(total_gates):
         add_single_qubit_gate = random.randint(0,1)
 
         if add_single_qubit_gate:
-            qubit = [random.randint(0, N_QUBITS-1)]
+            qubit = [random.randint(0, n_qubits-1)]
             gate = SingleQubitGate.get_random_gate()
             qc.append(gate, qubit)
             continue
 
-        qubits = random.sample(range(N_QUBITS), 2)
+        qubits = random.sample(range(n_qubits), 2)
         gate = MultiQubitGate.get_random_gate()
         qc.append(gate, qubits)
 

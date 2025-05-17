@@ -1,18 +1,25 @@
+"""Auxiliary functions and classes"""
+
+from typing import Optional
+
 import numpy as np
 import matplotlib.pyplot as plt
+
 from constants import DEBUG
-from math import ceil
 
 class PlotImages:
+    """Plot Result images from layer"""
+
     @staticmethod
-    def plot_filters(images, title=None):
+    def plot_filters(images:torch.Tensor, title:Optinal[str]=None):
+        """Plot every image from current layer"""
         if not DEBUG:
             return
 
         images = images.cpu().detach().numpy()[0]
 
         cols = 4
-        rows = ceil(images.shape[0]/cols)
+        rows = np.ceil(images.shape[0]/cols)
 
         plt.figure(figsize=(40,20))
 
@@ -28,7 +35,12 @@ class PlotImages:
 
 
 def debug(*inp):
+    """Print debug info"""
     if(not DEBUG):
         return
 
-    print(*inp)
+    print("[!] ", *inp)
+
+def should_measure() -> bool:
+    """returns a boolean with 50% probability to be True (measure the circuit)"""
+    return bool(np.random.randint(0,2))

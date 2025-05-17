@@ -1,3 +1,5 @@
+"""Generate dataset"""
+
 from typing import Dict, List, TypedDict, Tuple
 import os 
 from multiprocessing.pool import Pool
@@ -23,21 +25,24 @@ from constants import *
 from image import transform_image
 from colors import Colors
 from random_circuit import get_random_circuit
+from helpers import should_measure
 
 Dist = Dict[int,float]
 States = List[int]
 class CircuitResult(TypedDict):
+    """Type for circuit results"""
     index:pl.Series #int
     depth:pl.Series #int
     file:pl.Series #string
     measure:pl.Series #bool
     result:pl.Series # JSON string
     hash:pl.Series #string
+FilePath = str
 
-
-def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[QuantumCircuit, int, bool]:
-    qc = get_random_circuit()
-    measure_before = bool(np.random.randint(0,2))
+def generate_circuit(circuit_image_path:FilePath, pm:StagedPassManager) -> Tuple[QuantumCircuit, int, bool]:
+    """Generate circuit and return the isa version of the circuit, its depth and if it was measured"""
+    qc = get_random_circuit(N_QUBITS, MAX_TOTAL_GATES)
+    measure_before = should_measure()
     
     if measure_before:
         qc.measure_all()
@@ -53,15 +58,19 @@ def generate_circuit(circuit_image_path:str, pm:StagedPassManager) -> Tuple[Quan
     return isa_qc, depth, measure_before
 
 def get_circuit_results(qc:QuantumCircuit, sampler:Sampler) -> Dist:
+    """Execute cirucit on sampler. Returns its quasi dist"""
     return sampler.run([qc], shots=SHOTS).result().quasi_dists[0]
 
 def fix_dist_gaps(dist:Dist, states:States):
+    """Auxiliary function to fill the remaining bitstrings with 0"""
     for state in states:
         result_value = dist.get(state)
         if result_value is None:
             dist[state] = 0
 
-def generate_image(index:int, states:States, image_path:str) -> CircuitResult:
+def generate_image(index:int, states:States, image_path:FilePath) -> CircuitResult:
+    """Run an experiment, save its image and return its results"""
+
     sim = AerSimulator()
     pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
     isa_qc,depth,measure = generate_circuit(image_path, pm)
@@ -83,6 +92,11 @@ def generate_image(index:int, states:States, image_path:str) -> CircuitResult:
     }
 
 def generate_images() -> pl.DataFrame:
+    """
+    Generate multiple images and return a dataframe with information about them.
+    It runs in multiple threads(processes in this case) to speed up.
+    """
+
     df = pl.DataFrame(schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String, "measure":pl.Boolean})
 
     bitstrings_to_int = [ int(''.join(comb), 2) for comb in product('01', repeat=N_QUBITS) ]
@@ -113,6 +127,8 @@ def generate_images() -> pl.DataFrame:
     return df
 
 def remove_duplicated_files(df:pl.DataFrame) -> pl.DataFrame:
+    """Remove images that are duplicated based on its hash"""
+
     clean_df = df.unique(maintain_order=True, subset=["hash"])
     clean_df_indexes = clean_df.get_column("index")
 
@@ -127,11 +143,11 @@ def remove_duplicated_files(df:pl.DataFrame) -> pl.DataFrame:
     
     
 def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
+    """Normalize images and save them into train/test split h5 files"""
     print("%sTransforming images%s"%(Colors.GREENBG,Colors.ENDC))
     print("%s%f For Training%s"%(Colors.YELLOWFG,percentage_train*100,Colors.ENDC))
 
     max_width,max_height = NEW_DIM
-
     total_rows_training = int(len(df)*percentage_train)
     total_rows_test = len(df)-total_rows_training
     print("%s%d rows for training%s"%(Colors.YELLOWFG, total_rows_training, Colors.ENDC))
@@ -148,7 +164,7 @@ def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
         for row in tqdm(rows.iter_rows(named=True)):
             image_path = row["file"]
             with Image.open(image_path) as img:
-                tensor = transform_image(img)
+                tensor = transform_image(img, max_width, max_height)
                 h5_file.create_dataset(f"{image_i}", data=tensor)
             image_i += 1
     
@@ -156,6 +172,8 @@ def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
     images_test.close()
 
 def main():
+    """generate, clean and save dataset and images"""
+
     os.makedirs(DATASET_PATH, exist_ok=True)
 
     df = generate_images()
