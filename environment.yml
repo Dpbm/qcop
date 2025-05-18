@@ -5,7 +5,6 @@ dependencies:
     - pip
     - python=3.12
     - pip:
-      - pandas
       - numpy
       - qiskit
       - tqdm
@@ -19,3 +18,5 @@ dependencies:
       - torchvision
       - h5py
       - polars
+platforms:
+  - linux-64

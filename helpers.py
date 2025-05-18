@@ -1,9 +1,11 @@
 """Auxiliary functions and classes"""
 
-from typing import Optional
+from typing import List, Optional
+import random
 
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
 from constants import DEBUG
 
@@ -11,7 +13,7 @@ class PlotImages:
     """Plot Result images from layer"""
 
     @staticmethod
-    def plot_filters(images:torch.Tensor, title:Optinal[str]=None):
+    def plot_filters(images:torch.Tensor, title:Optional[str]=None):
         """Plot every image from current layer"""
         if not DEBUG:
             return
@@ -41,6 +43,8 @@ def debug(*inp):
 
     print("[!] ", *inp)
 
-def should_measure() -> bool:
-    """returns a boolean with 50% probability to be True (measure the circuit)"""
-    return bool(np.random.randint(0,2))
+def get_measurements(n_qubits:int) -> List[int]:
+    """Return a list of qubits to be measured"""
+    total_measurements = random.randint(1,n_qubits)
+    qubits = list(range(n_qubits))
+    return random.sample(qubits, total_measurements)

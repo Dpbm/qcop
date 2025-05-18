@@ -338,7 +338,9 @@ def main():
     device = default_cuda_device if torch.cuda.is_available() else 'cpu'
     
     total_args = len(sys.argv)
-    checkpoint_path = sys.argv[-1] if total_args == 2 else None
+    checkpoint_path = None
+    if total_args == 2 and sys.argv[-1] != "":
+        checkpoint_path = sys.argv[-1]
 
     checkpoint = Checkpoint(checkpoint_path)
     checkpoint.load()

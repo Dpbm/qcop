@@ -11,6 +11,6 @@ def transform_image(img:Image, width:int, height:int) -> torch.Tensor:
                         v2.Resize((width, height), interpolation=Image.LANCZOS),
                         v2.PILToTensor(),
                         v2.ToDtype(torch.float16),
-                    ])(image)
+                    ])(img)
 
     return image_tensor/255.0

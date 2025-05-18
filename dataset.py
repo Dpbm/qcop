@@ -7,7 +7,7 @@ import hashlib
 import json
 from itertools import product
 
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, ClassicalRegister
 from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
 
 from qiskit_aer import AerSimulator
@@ -25,44 +25,49 @@ from constants import *
 from image import transform_image
 from colors import Colors
 from random_circuit import get_random_circuit
-from helpers import should_measure
+from helpers import get_measurements
 
 Dist = Dict[int,float]
 States = List[int]
+FilePath = str
+Measurements = List[int]
+
 class CircuitResult(TypedDict):
     """Type for circuit results"""
     index:pl.Series #int
     depth:pl.Series #int
     file:pl.Series #string
-    measure:pl.Series #bool
+    measurements:pl.Series #JSON string
     result:pl.Series # JSON string
     hash:pl.Series #string
-FilePath = str
 
-def generate_circuit(circuit_image_path:FilePath, pm:StagedPassManager) -> Tuple[QuantumCircuit, int, bool]:
-    """Generate circuit and return the isa version of the circuit, its depth and if it was measured"""
+def generate_circuit(circuit_image_path:FilePath, pm:StagedPassManager) -> Tuple[QuantumCircuit, int, Measurements]:
+    """Generate circuit and return the isa version of the circuit, its depth and the qubits that were measured"""
+
     qc = get_random_circuit(N_QUBITS, MAX_TOTAL_GATES)
-    measure_before = should_measure()
-    
-    if measure_before:
-        qc.measure_all()
+
+    measurements = get_measurements(N_QUBITS)
+    total_measurements = len(measurements)
+
+    classical_register = ClassicalRegister(total_measurements)
+    qc.add_register(classical_register)
+    qc.measure(measurements, classical_register)
 
     qc.draw('mpl', filename=circuit_image_path)
-
-    if not measure_before:
-        qc.measure_all()
 
     depth = qc.depth() 
 
     isa_qc = pm.run(qc)
-    return isa_qc, depth, measure_before
+    return isa_qc, depth, measurements
 
 def get_circuit_results(qc:QuantumCircuit, sampler:Sampler) -> Dist:
     """Execute cirucit on sampler. Returns its quasi dist"""
+
     return sampler.run([qc], shots=SHOTS).result().quasi_dists[0]
 
 def fix_dist_gaps(dist:Dist, states:States):
     """Auxiliary function to fill the remaining bitstrings with 0"""
+
     for state in states:
         result_value = dist.get(state)
         if result_value is None:
@@ -73,7 +78,7 @@ def generate_image(index:int, states:States, image_path:FilePath) -> CircuitResu
 
     sim = AerSimulator()
     pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
-    isa_qc,depth,measure = generate_circuit(image_path, pm)
+    isa_qc,depth,measurements = generate_circuit(image_path, pm)
 
     with open(image_path, "rb") as file:
         file_hash = hashlib.md5(file.read()).hexdigest()
@@ -88,7 +93,7 @@ def generate_image(index:int, states:States, image_path:FilePath) -> CircuitResu
         "file": pl.Series("file", [image_path], dtype=pl.String),
         "result": pl.Series("result", [json.dumps(list(result.values()))], dtype=pl.String),
         "hash": pl.Series("hash", [file_hash], dtype=pl.String),
-        "measure": pl.Series("measure", [measure], dtype=pl.Boolean)
+        "measurements": pl.Series("measurements", [json.dumps(measurements)], dtype=pl.String)
     }
 
 def generate_images() -> pl.DataFrame:
@@ -97,7 +102,7 @@ def generate_images() -> pl.DataFrame:
     It runs in multiple threads(processes in this case) to speed up.
     """
 
-    df = pl.DataFrame(schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String, "measure":pl.Boolean})
+    df = pl.DataFrame(schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String, "measurements":pl.String})
 
     bitstrings_to_int = [ int(''.join(comb), 2) for comb in product('01', repeat=N_QUBITS) ]
 
@@ -175,10 +180,10 @@ def main():
     """generate, clean and save dataset and images"""
 
     os.makedirs(DATASET_PATH, exist_ok=True)
-
+    
     df = generate_images()
     df = remove_duplicated_files(df)
-
+    
     df.write_csv(DATASET_FILE)    
 
     transform_images(df)
