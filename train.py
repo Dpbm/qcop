@@ -320,12 +320,15 @@ def train(device:Device, checkpoint:Checkpoint):
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            Checkpoint.save(
-                epoch,
-                model.state_dict(),
-                opt.state_dict(),
-                scheduler.state_dict()
-            )
+        
+        
+        # save a checkpoint after every epoch
+        Checkpoint.save(
+            epoch,
+            model.state_dict(),
+            opt.state_dict(),
+            scheduler.state_dict()
+        )
     return model
 
 
