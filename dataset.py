@@ -1,11 +1,11 @@
 """Generate dataset"""
-
 from typing import Dict, List, TypedDict, Tuple
 import os 
 from multiprocessing.pool import Pool
 import hashlib
 import json
 from itertools import product
+import random
 
 from qiskit import QuantumCircuit, ClassicalRegister
 from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
@@ -46,12 +46,18 @@ def generate_circuit(circuit_image_path:FilePath, pm:StagedPassManager) -> Tuple
 
     qc = get_random_circuit(N_QUBITS, MAX_TOTAL_GATES)
 
-    measurements = get_measurements(N_QUBITS)
-    total_measurements = len(measurements)
+    type_of_meas = random.randint(0,1)
+    measurements = list(range(N_QUBITS))
 
-    classical_register = ClassicalRegister(total_measurements)
-    qc.add_register(classical_register)
-    qc.measure(measurements, classical_register)
+    if type_of_meas == 0:
+        measurements = get_measurements(N_QUBITS)
+        total_measurements = len(measurements)
+
+        classical_register = ClassicalRegister(total_measurements)
+        qc.add_register(classical_register)
+        qc.measure(measurements, classical_register)
+    else:
+        qc.measure_all()
 
     qc.draw('mpl', filename=circuit_image_path)
 
@@ -147,34 +153,22 @@ def remove_duplicated_files(df:pl.DataFrame) -> pl.DataFrame:
     return clean_df
     
     
-def transform_images(df:pl.DataFrame, percentage_train:float=0.8):
-    """Normalize images and save them into train/test split h5 files"""
+def transform_images(df:pl.DataFrame):
+    """Normalize images and save them into a h5 file"""
     print("%sTransforming images%s"%(Colors.GREENBG,Colors.ENDC))
-    print("%s%f For Training%s"%(Colors.YELLOWFG,percentage_train*100,Colors.ENDC))
 
     max_width,max_height = NEW_DIM
-    total_rows_training = int(len(df)*percentage_train)
-    total_rows_test = len(df)-total_rows_training
-    print("%s%d rows for training%s"%(Colors.YELLOWFG, total_rows_training, Colors.ENDC))
-    print("%s%d rows for testing%s"%(Colors.YELLOWFG, total_rows_test, Colors.ENDC))
 
-    images_train = h5py.File(IMAGES_TRAIN, "w")
-    images_test = h5py.File(IMAGES_TEST, "w")
-
-    train_rows = df.head(total_rows_training)
-    test_rows = df.tail(total_rows_test)
-
-    for rows, h5_file in zip((train_rows, test_rows), (images_train, images_test)):
-        image_i = 0
-        for row in tqdm(rows.iter_rows(named=True)):
+    image_i = 0
+    with h5py.File(IMAGES_H5_FILE, "w") as file:
+        for row in tqdm(df.iter_rows(named=True)):
             image_path = row["file"]
+
             with Image.open(image_path) as img:
                 tensor = transform_image(img, max_width, max_height)
-                h5_file.create_dataset(f"{image_i}", data=tensor)
+                file.create_dataset(f"{image_i}", data=tensor)
+
             image_i += 1
-    
-    images_train.close()
-    images_test.close()
 
 def main():
     """generate, clean and save dataset and images"""
@@ -187,7 +181,6 @@ def main():
     df.write_csv(DATASET_FILE)    
 
     transform_images(df)
-    
 
 if __name__ == "__main__":
     try:

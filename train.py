@@ -143,6 +143,7 @@ class Model(torch.nn.Module):
         """Apply all transformations onto the input image"""
 
         debug("Input Data: %s"%(str(image.shape)))
+        PlotImages.plot_filters(image, title="Input Image")
 
         image = F.relu(self.conv1(image))
         image = self.pool1(image)
@@ -153,6 +154,7 @@ class Model(torch.nn.Module):
             image = layer(image)
 
             PlotImages.plot_filters(image, title="Conv%d"%(i+1))
+
             debug(image.shape)
 
         image = self.pool2(image)
@@ -320,6 +322,7 @@ def train(device:Device, checkpoint:Checkpoint):
 
         if avg_loss < best_loss:
             best_loss = avg_loss
+            print("%sBest loss: %d%s"%(Colors.GREENBG, best_loss, Colors.ENDC))
         
         
         # save a checkpoint after every epoch
@@ -329,6 +332,7 @@ def train(device:Device, checkpoint:Checkpoint):
             opt.state_dict(),
             scheduler.state_dict()
         )
+
     return model
 
 
@@ -358,7 +362,7 @@ def main():
         #---- FOR MANUAL TESTS ----- 
         model = get_model(device, checkpoint.model)
         test = ImagesDataset(device, IMAGES_TRAIN, DATASET_FILE)
-        test_loader = DataLoader(test, batch_size=1, shuffle=False)
+        test_loader = DataLoader(test, batch_size=1, shuffle=True)
         model.train(False)
         model.eval()
 

@@ -15,13 +15,15 @@ class PlotImages:
     @staticmethod
     def plot_filters(images:torch.Tensor, title:Optional[str]=None):
         """Plot every image from current layer"""
+
         if not DEBUG:
             return
+
 
         images = images.cpu().detach().numpy()[0]
 
         cols = 4
-        rows = np.ceil(images.shape[0]/cols)
+        rows = int(np.ceil(images.shape[0]/cols))
 
         plt.figure(figsize=(40,20))
 

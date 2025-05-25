@@ -75,22 +75,26 @@ class MultiQubitGate(Gate):
 
 def get_random_circuit(n_qubits:int, total_gates:int) -> QuantumCircuit:
     """Generate a random circuit based on the amount of qubits and gates."""
+
     total_gates = random.randint(0,total_gates)
 
     qc = QuantumCircuit(n_qubits)
     
     for _ in range(total_gates):
         add_single_qubit_gate = random.randint(0,1)
+        add_barrier = random.randint(0,1)
 
         if add_single_qubit_gate:
             qubit = [random.randint(0, n_qubits-1)]
             gate = SingleQubitGate.get_random_gate()
             qc.append(gate, qubit)
-            continue
+        else:            
+            qubits = random.sample(range(n_qubits), 2)
+            gate = MultiQubitGate.get_random_gate()
+            qc.append(gate, qubits)
 
-        qubits = random.sample(range(n_qubits), 2)
-        gate = MultiQubitGate.get_random_gate()
-        qc.append(gate, qubits)
+        if add_barrier:
+            qc.barrier()
 
     return qc
 
