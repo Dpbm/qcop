@@ -2,10 +2,10 @@
 
 from typing import Optional, Tuple
 from collections import OrderedDict
-import gc 
 import sys
 import json
 import time
+import argparse
 
 import torch
 import torch.nn as nn
@@ -17,8 +17,7 @@ import numpy as np
 import h5py
 
 from constants import (
-    IMAGES_TRAIN, 
-    IMAGES_TEST, 
+    IMAGES_H5_FILE, 
     DATASET_PATH, 
     DATASET_FILE, 
     EPOCHS, 
@@ -343,20 +342,19 @@ def main():
 
     default_cuda_device = "cuda"
     device = default_cuda_device if torch.cuda.is_available() else 'cpu'
-    
-    total_args = len(sys.argv)
-    checkpoint_path = None
-    if total_args == 2 and sys.argv[-1] != "":
-        checkpoint_path = sys.argv[-1]
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--checkpoint", type=str)
+    args = parser.parse_args(sys.argv[1:])
+    checkpoint_path = args.checkpoint
 
     checkpoint = Checkpoint(checkpoint_path)
     checkpoint.load()
-    
-    gc.collect()
+
     if device == default_cuda_device:
         torch.cuda.empty_cache()
 
-    print("%susing: %s%s"%(Colors.GREENBG, device, Colors.ENDC))
+    print("%susing: %s device %s"%(Colors.GREENBG, device, Colors.ENDC))
 
     if DEBUG:
         #---- FOR MANUAL TESTS ----- 

@@ -21,9 +21,6 @@ DATASET_PATH = os.path.join('.', 'dataset')
 DATASET_FILE = "dataset.csv"
 
 IMAGES_H5_FILE = "images.h5"
-IMAGES_TRAIN = "images_train.h5"
-IMAGES_TEST = "images_test.h5"
-IMAGES_VALIDATION = "images_validation.h5"
 
 GHZ_FILE = "ghz.pth"
 GHZ_IMAGE_FILE = "ghz.jpeg"

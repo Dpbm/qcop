@@ -82,7 +82,7 @@ def get_random_circuit(n_qubits:int, total_gates:int) -> QuantumCircuit:
     
     for _ in range(total_gates):
         add_single_qubit_gate = random.randint(0,1)
-        add_barrier = random.randint(0,1)
+        add_barrier = random.random() < 0.1 # 10% of chance
 
         if add_single_qubit_gate:
             qubit = [random.randint(0, n_qubits-1)]

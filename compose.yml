@@ -1,0 +1,16 @@
+services:
+  pipeline:
+    container_name: airflow
+    image: apache/airflow:slim-2.11.0-python3.12
+    environment:
+      - USERNAME=${USERNAME}
+      - EMAIL=${EMAIL}
+      - PASSWORD=${PASSWORD}
+    command: >
+          bash -c "
+            airflow db migrate &&\
+            echo 'Creating user $USERNAME...'\
+            airflow users create --username $USERNAME --firstname admin --lastname admin --role Admin --email $EMAIL --password $PASSWORD &&\
+            airflow webserver\ 
+          "
+    restart: unless-stopped
