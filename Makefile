@@ -28,3 +28,5 @@ pack:
 ghz: clean-ghz
 	python ghz.py
 
+lock: 
+	conda-lock -f environment.yml
