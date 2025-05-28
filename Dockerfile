@@ -1,15 +1,26 @@
-FROM apache/airflow:slim-2.11.0-python3.12
+FROM python:3.12.10-slim-bullseye AS setup
+
+COPY requirements.txt .
+RUN python -m venv /proj-venv
+
+ENV PIPENV="/proj-venv/bin/pip"
+
+RUN ${PIPENV} install -r requirements.txt
 
 
+
+FROM apache/airflow:slim-2.11.0-python3.12 as serve
+
+COPY --from=setup /proj-venv/lib/python3.12/site-packages/ /home/airflow/.local/lib/python3.12/site-packages
+
+WORKDIR /hom/airflow/project
 COPY . .
-
-RUN pip install -r requirements.txt
+RUN rm -rf requirements.txt /opt/airflow/dags
+RUN mv ./dags /opt/airflow/dags
 
 ARG USER=default
 ARG PASSWORD=default
 ARG EMAIL=default@default.com
-
-EXPOSE 8080
 
 RUN airflow db migrate
 RUN airflow users create --username $USER \
@@ -19,4 +30,5 @@ RUN airflow users create --username $USER \
                          --email ${EMAIL} \
                          --password ${PASSWORD}
 
-ENTRYPOINT [ "airflow", "webserver" ]
+EXPOSE 8080
+ENTRYPOINT [ "airflow", "standalone" ]

@@ -1,5 +1,5 @@
 *
-!dags/*
+!dags/
 !colors.py
 !constants.py
 !dataset.py

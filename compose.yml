@@ -9,5 +9,5 @@ services:
         - PASSWORD=${AIRFLOW_PASSWORD}
         - EMAIL=${AIRFLOW_EMAIL}
     volumes:
-      - .:/data
+      - .:/home/airflow/data
     restart: unless-stopped

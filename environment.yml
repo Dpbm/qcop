@@ -18,7 +18,8 @@ dependencies:
       - torchvision
       - h5py
       - polars
-      - apache-airflow
+      - apache-airflow==2.11.0
+      - apache-airflow-providers-standard
       - pandas
 platforms:
   - linux-64
