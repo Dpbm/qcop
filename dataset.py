@@ -102,14 +102,13 @@ def generate_image(index:int, states:States, image_path:FilePath) -> CircuitResu
         "measurements": pl.Series("measurements", [json.dumps(measurements)], dtype=pl.String)
     }
 
-def generate_images() -> pl.DataFrame:
+def generate_images():
     """
-    Generate multiple images and return a dataframe with information about them.
+    Generate multiple images and saves a dataframe with information about them.
     It runs in multiple threads(processes in this case) to speed up.
     """
 
-    df = pl.DataFrame(schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String, "measurements":pl.String})
-
+    df = open_csv(DATASET_FILE)
     bitstrings_to_int = [ int(''.join(comb), 2) for comb in product('01', repeat=N_QUBITS) ]
 
     with tqdm(total=DATASET_SIZE)  as progress:
@@ -130,15 +129,17 @@ def generate_images() -> pl.DataFrame:
                 results = pool.starmap(generate_image, args)
             
             for result in results:
-                tmp_df = pl.DataFrame(result)
+                tmp_df = create_df(result)
                 df.vstack(tmp_df, in_place=True)
 
             progress.update(TOTAL_THREADS)
+    save_df(df,DATASET_FILE)
 
-    return df
 
-def remove_duplicated_files(df:pl.DataFrame) -> pl.DataFrame:
+def remove_duplicated_files():
     """Remove images that are duplicated based on its hash"""
+    
+    df = open_csv(DATASET_FILE)
 
     clean_df = df.unique(maintain_order=True, subset=["hash"])
     clean_df_indexes = clean_df.get_column("index")
@@ -150,12 +151,14 @@ def remove_duplicated_files(df:pl.DataFrame) -> pl.DataFrame:
         file = row["file"]
         os.remove(file)
 
-    return clean_df
+    save_df(clean_df, DATASET_FILE)
     
     
-def transform_images(df:pl.DataFrame):
+def transform_images():
     """Normalize images and save them into a h5 file"""
     print("%sTransforming images%s"%(Colors.GREENBG,Colors.ENDC))
+
+    df = open_csv(DATASET_FILE)
 
     max_width,max_height = NEW_DIM
 
@@ -170,17 +173,36 @@ def transform_images(df:pl.DataFrame):
 
             image_i += 1
 
+def crate_dataset_folder(folder:FilePath):
+    """Create a folder to store images for the dataset"""
+    os.makedirs(folder, exist_ok=True)
+
+def create_df(data:Dict={}) -> pl.DataFrame:
+    """returns a Polars DataFrame schema"""
+    return pl.DataFrame(data,schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String, "measurements":pl.String})
+
+def open_csv(path:FilePath) -> pl.DataFrame:
+    """opens the CSV file and import it as a DataFrame"""
+    return pl.read_csv(path)
+
+def save_df(df:pl.DataFrame, file_path:FilePath):
+    """Save dataset as csv"""
+    df.write_csv(file_path)    
+
+def start_df(file_path:FilePath):
+    """generates an empty df and saves it on a csv file"""
+    df = create_df()
+    save_df(df,DATASET_FILE)
+
+
 def main():
     """generate, clean and save dataset and images"""
+    crate_dataset_folder(DATASET_PATH)
 
-    os.makedirs(DATASET_PATH, exist_ok=True)
-    
-    df = generate_images()
-    df = remove_duplicated_files(df)
-    
-    df.write_csv(DATASET_FILE)    
-
-    transform_images(df)
+    start_df()
+    generate_images()
+    remove_duplicated_files()
+    transform_images()
 
 if __name__ == "__main__":
     try:

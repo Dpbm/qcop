@@ -9,5 +9,11 @@ services:
         - PASSWORD=${AIRFLOW_PASSWORD}
         - EMAIL=${AIRFLOW_EMAIL}
     volumes:
-      - .:/home/airflow/data
+      - ./data:/home/airflow/data
+      - ./dags:/opt/airflow/dags
+    environment:
+      - PYTHONPATH=/home/airflow/project
+      - TARGET_FOLDER=/home/airflow/data
+      - TZ=America/Sao_Paulo
+      - PYTZDATA_TZDATADIR=/usr/share/zoneinfo
     restart: unless-stopped

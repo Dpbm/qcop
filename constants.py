@@ -17,14 +17,16 @@ TOTAL_THREADS = THREADS = 10
 BATCH_SIZE = 10
 
 DATASET_SIZE = 20000
-DATASET_PATH = os.path.join('.', 'dataset')
-DATASET_FILE = "dataset.csv"
+TARGET_FOLDER = os.environ.get("TARGET_FOLDER") or "."
 
-IMAGES_H5_FILE = "images.h5"
+DATASET_PATH = os.path.join(TARGET_FOLDER, 'dataset')
+DATASET_FILE = os.path.join(TARGET_FOLDER, "dataset.csv")
 
-GHZ_FILE = "ghz.pth"
-GHZ_IMAGE_FILE = "ghz.jpeg"
-GHZ_PRED_FILE = "ghz-prediction.pth"
+IMAGES_H5_FILE = os.path.join(TARGET_FOLDER, "images.h5")
+
+GHZ_FILE = os.path.join(TARGET_FOLDER, "ghz.pth")
+GHZ_IMAGE_FILE = os.path.join(TARGET_FOLDER, "ghz.jpeg")
+GHZ_PRED_FILE = os.path.join(TARGET_FOLDER,"ghz-prediction.pth")
 
 NEW_DIM = (500, 500)
 
