@@ -346,7 +346,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=str)
     args = parser.parse_args(sys.argv[1:])
-    checkpoint_path = args.checkpoint
+    checkpoint_path = args.checkpoint if args.checkpoint else None
 
     checkpoint = Checkpoint(checkpoint_path)
     checkpoint.load()

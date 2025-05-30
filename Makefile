@@ -19,7 +19,7 @@ gen-dataset:
 	python dataset.py 
 
 train: 
-	python train.py "$(CHECKPOINT)"
+	python train.py --checkpoint "$(CHECKPOINT)"
 
 pack:
 	zip -r dataset-images.zip dataset/

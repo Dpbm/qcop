@@ -1,5 +1,5 @@
 """Generate dataset"""
-from typing import Dict, List, TypedDict, Tuple
+from typing import Dict, List, TypedDict, Tuple, Any
 import os 
 from multiprocessing.pool import Pool
 import hashlib
@@ -27,6 +27,7 @@ from colors import Colors
 from random_circuit import get_random_circuit
 from helpers import get_measurements
 
+Schema = Dict[str, Any]
 Dist = Dict[int,float]
 States = List[int]
 FilePath = str
@@ -177,13 +178,25 @@ def crate_dataset_folder(folder:FilePath):
     """Create a folder to store images for the dataset"""
     os.makedirs(folder, exist_ok=True)
 
+def get_schema() -> Schema:
+    """Return columns schema"""
+    return {
+        "index":pl.UInt16, 
+        "depth":pl.UInt8, 
+        "file":pl.String, 
+        "result":pl.String, 
+        "hash":pl.String, 
+        "measurements":pl.String
+    }
+
 def create_df(data:Dict={}) -> pl.DataFrame:
     """returns a Polars DataFrame schema"""
-    return pl.DataFrame(data,schema={"index":pl.UInt16, "depth":pl.UInt8, "file":pl.String, "result":pl.String, "hash":pl.String, "measurements":pl.String})
+    return pl.DataFrame(data,schema=get_schema())
 
 def open_csv(path:FilePath) -> pl.DataFrame:
     """opens the CSV file and import it as a DataFrame"""
-    return pl.read_csv(path)
+    csv = pl.read_csv(path)
+    return csv.cast(get_schema())
 
 def save_df(df:pl.DataFrame, file_path:FilePath):
     """Save dataset as csv"""
@@ -192,14 +205,13 @@ def save_df(df:pl.DataFrame, file_path:FilePath):
 def start_df(file_path:FilePath):
     """generates an empty df and saves it on a csv file"""
     df = create_df()
-    save_df(df,DATASET_FILE)
-
+    save_df(df,file_path)
 
 def main():
     """generate, clean and save dataset and images"""
     crate_dataset_folder(DATASET_PATH)
 
-    start_df()
+    start_df(DATASET_FILE)
     generate_images()
     remove_duplicated_files()
     transform_images()
