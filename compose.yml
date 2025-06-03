@@ -1,9 +1,29 @@
 services:
-  pipeline:
-    container_name: airflow
+  database:
+    container_name: db
+    hostname: db
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: database.Dockerfile
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${ROOT_DB}
+      - POSTGRES_PASSWORD=${ROOT_PASS}
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    restart: always
+
+  pipeline:
+    container_name: airflow
+    depends_on: 
+      - database
+    ports:
+      - "8080:8080"
+    build:
+      context: .
+      dockerfile: airflow.Dockerfile
       args:
         - USER=${AIRFLOW_USERNAME}
         - PASSWORD=${AIRFLOW_PASSWORD}
@@ -16,4 +36,8 @@ services:
       - TARGET_FOLDER=/home/airflow/data
       - TZ=America/Sao_Paulo
       - PYTZDATA_TZDATADIR=/usr/share/zoneinfo
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=False
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - AIRFLOW_CONN_METADATA_DB=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
     restart: unless-stopped

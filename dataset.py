@@ -1,7 +1,8 @@
 """Generate dataset"""
 from typing import Dict, List, TypedDict, Tuple, Any
 import os 
-from multiprocessing.pool import Pool
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 from itertools import product
@@ -126,12 +127,11 @@ def generate_images():
                 args.append((index, bitstrings_to_int, circuit_image_path))
                 index += 1
 
-            with Pool(processes=TOTAL_THREADS) as pool:
-                results = pool.starmap(generate_image, args)
-            
-            for result in results:
-                tmp_df = create_df(result)
-                df.vstack(tmp_df, in_place=True)
+            with ThreadPoolExecutor(max_workers=TOTAL_THREADS) as pool:
+                threads = [pool.submit(generate_image, *arg) for arg in args ]
+                for future in as_completed(threads):
+                    tmp_df = create_df(future.result())
+                    df.vstack(tmp_df, in_place=True)
 
             progress.update(TOTAL_THREADS)
     save_df(df,DATASET_FILE)
@@ -141,7 +141,6 @@ def remove_duplicated_files():
     """Remove images that are duplicated based on its hash"""
     
     df = open_csv(DATASET_FILE)
-
     clean_df = df.unique(maintain_order=True, subset=["hash"])
     clean_df_indexes = clean_df.get_column("index")
 
@@ -195,9 +194,8 @@ def create_df(data:Dict={}) -> pl.DataFrame:
 
 def open_csv(path:FilePath) -> pl.DataFrame:
     """opens the CSV file and import it as a DataFrame"""
-    csv = pl.read_csv(path)
+    csv = pl.read_csv(path) 
     return csv.cast(get_schema())
-
 def save_df(df:pl.DataFrame, file_path:FilePath):
     """Save dataset as csv"""
     df.write_csv(file_path)    

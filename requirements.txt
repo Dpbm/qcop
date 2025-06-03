@@ -14,3 +14,6 @@ polars
 pandas
 apache-airflow==2.11.0
 apache-airflow-providers-standard
+psycopg2-binary
+kagglehub
+huggingface_hub

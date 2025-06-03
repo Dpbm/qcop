@@ -1,6 +1,4 @@
-"""ETL pipeline using Airflow"""
-
-from datetime import timedelta
+"""ETL pipeline using Airflow for dataset"""
 
 from airflow import DAG
 from airflow.providers.standard.operators.bash import BashOperator
@@ -12,8 +10,6 @@ from ghz import gen_circuit
 
 default_args = {
     "depends_on_past": True,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=2)
 }
 
 with DAG(

@@ -3,6 +3,7 @@
 from typing import Optional, Tuple
 from collections import OrderedDict
 import sys
+import os
 import json
 import time
 import argparse
@@ -18,6 +19,7 @@ import h5py
 
 from constants import (
     IMAGES_H5_FILE, 
+    TARGET_FOLDER,
     DATASET_PATH, 
     DATASET_FILE, 
     EPOCHS, 
@@ -211,7 +213,7 @@ class Checkpoint:
     @staticmethod
     def save(epoch:int, model:StateDict, optimizer:StateDict, scheduler:StateDict):
         """Save checkpoint data"""
-        path = "checkpoint_%s.pth"%(time.ctime())
+        path = os.path.join(TARGET_FOLDER, "checkpoint_%s.pth"%(time.ctime()))
         print("%sSaving checkpoint at: %s...%s"%(Colors.MAGENTABG,path,Colors.ENDC))
         checkpoint = {
             'epoch': epoch,
@@ -334,48 +336,70 @@ def train(device:Device, checkpoint:Checkpoint):
 
     return model
 
-
-def main():
+def get_device() -> Device:
     """
-    Setup environment and start experiments.
+    Return the device to be used with pytorch
     """
 
     default_cuda_device = "cuda"
     device = default_cuda_device if torch.cuda.is_available() else 'cpu'
+    
+    if device == default_cuda_device:
+        torch.cuda.empty_cache()
+    
+    print("%susing: %s device %s"%(Colors.GREENBG, device, Colors.ENDC))
 
+    return device
+
+def get_checkpoint_arg() -> Optional[str]:
+    """
+    Parse args from command line and retrieve the
+    checkpoint path.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=str)
     args = parser.parse_args(sys.argv[1:])
     checkpoint_path = args.checkpoint if args.checkpoint else None
+    return checkpoint_path
+
+
+def run_debug_experiemnt():
+    """
+    Run Manual tests.
+    """
+    device = get_device()
+
+    checkpoint_path = get_checkpoint_arg()     
+    checkpoint = Checkpoint(checkpoint_path)
+    checkpoint.load()
+
+    model = get_model(device, checkpoint.model)
+    test = ImagesDataset(device, IMAGES_TRAIN, DATASET_FILE)
+    test_loader = DataLoader(test, batch_size=1, shuffle=True)
+    model.train(False)
+    model.eval()
+
+    loader_iter = iter(test_loader)
+    image,label = next(loader_iter)
+
+    print("%scorrect: %s%s"%(Colors.GREENBG,str(label), Colors.ENDC))
+    model(image)
+    print("%seval: %s%s"%(Colors.GREENBG, str(model(image)), Colors.ENDC))
+
+def setup_and_run_training():
+    """
+    Setup and run a training task.
+    """
+
+    device = get_device()
+
+    checkpoint_path = get_checkpoint_arg()
 
     checkpoint = Checkpoint(checkpoint_path)
     checkpoint.load()
 
-    if device == default_cuda_device:
-        torch.cuda.empty_cache()
-
-    print("%susing: %s device %s"%(Colors.GREENBG, device, Colors.ENDC))
-
-    if DEBUG:
-        #---- FOR MANUAL TESTS ----- 
-        model = get_model(device, checkpoint.model)
-        test = ImagesDataset(device, IMAGES_TRAIN, DATASET_FILE)
-        test_loader = DataLoader(test, batch_size=1, shuffle=True)
-        model.train(False)
-        model.eval()
-
-        loader_iter = iter(test_loader)
-        image,label = next(loader_iter)
-
-        print("%scorrect: %s%s"%(Colors.GREENBG,str(label), Colors.ENDC))
-        model(image)
-        print("%seval: %s%s"%(Colors.GREENBG, str(model(image)), Colors.ENDC))
-
-        sys.exit(0)
-
-    # ---- FOR TRAINING THE REAL MODEL ----
     model = train(device,checkpoint)
-    model.save()
+    model.save() # save best model
     model.eval()
 
     ghz = torch.load(GHZ_FILE, map_location=device)
@@ -383,6 +407,16 @@ def main():
     result = model(torch.unsqueeze(ghz,0))
     print("%sghz prediction: %s%s"%(Colors.GREENBG, str(result), Colors.ENDC))
     torch.save(result, GHZ_PRED_FILE)
+
+def main():
+    """
+    Setup environment and start experiments.
+    """
+    if DEBUG:
+        run_debug_experiemnt()
+        return
+
+    setup_and_run_training()
 
 if __name__ == "__main__":
     try:
