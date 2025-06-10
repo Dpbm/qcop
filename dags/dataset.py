@@ -3,6 +3,7 @@
 from airflow import DAG
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 from dataset import generate_images, crate_dataset_folder, remove_duplicated_files, transform_images, start_df
 from constants import DATASET_PATH, DATASET_FILE
@@ -86,9 +87,21 @@ with DAG(
     Generate a GHZ experiment and saves the experiments results.
     """
 
+    trigger_dag_train = TriggerDagRunOperator(
+        task_id="run_training",
+        trigger_dag_id="train_model",
+        wait_for_completion=False
+    )
+
+    trigger_dag_train.doc_md = """
+    Run training after finishing all processes.
+    """
+
     create_folder >> [gen_ghz, gen_df]
     gen_df >> gen_images
     gen_images >> remove_duplicates
     remove_duplicates >> transform_img
     transform_img >> pack_img
+
+    [gen_ghz, pack_img] >> trigger_dag_train
 

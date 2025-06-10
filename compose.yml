@@ -40,4 +40,5 @@ services:
       - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=False
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - AIRFLOW_CONN_METADATA_DB=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
-    restart: unless-stopped
+    restart: always
+

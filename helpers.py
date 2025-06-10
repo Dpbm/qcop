@@ -32,8 +32,10 @@ class PlotImages:
 
         plt.axis('off')
 
+
         for i,image in enumerate(images):
             ax = plt.subplot(rows,cols,i+1)
+            ax.axis('off')
             ax.imshow(image)
         plt.show()
 

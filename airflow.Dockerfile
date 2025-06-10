@@ -7,8 +7,6 @@ ENV PIPENV="/proj-venv/bin/pip"
 
 RUN ${PIPENV} install -r requirements.txt
 
-
-
 FROM apache/airflow:slim-2.11.0-python3.12 AS serve
 
 COPY --from=setup /proj-venv/lib/python3.12/site-packages/ /home/airflow/.local/lib/python3.12/site-packages
@@ -28,5 +26,7 @@ RUN airflow users create --username $USER \
     --email ${EMAIL} \
     --password ${PASSWORD}
 
+RUN airflow scheduler &
+
 EXPOSE 8080
-ENTRYPOINT [ "airflow", "standalone" ]
+ENTRYPOINT [ "airflow", "webserver", "--port", "8080" ]

@@ -26,10 +26,14 @@ from constants import (
     DEBUG, 
     BATCH_SIZE,
     GHZ_FILE,
-    GHZ_PRED_FILE
+    GHZ_PRED_FILE,
+    TRAIN_PERCENTAGE,
+    TEST_PERCENTAGE,
+    EVAL_PERCENTAGE
 )
 from helpers import debug, PlotImages
 from colors import Colors
+from dataset import get_schema
 
 StateDict = OrderedDict
 Device = str
@@ -39,15 +43,24 @@ Channels = int
 class ImagesDataset(Dataset):
     """Dataset class for handling batches and data itself"""
 
-    def __init__(self, device:Device, file:FilePath, dataset_file:FilePath):
-        self._dataset = pl.read_csv(dataset_file)
-        self._obj = h5py.File(file, "r")
-        self._total = len(self._obj)
+    def __init__(
+        self, 
+        device:Device, 
+        file:h5py.File, 
+        dataset:pl.LazyFrame,
+        total_images:int,
+        pivot:int
+        ):
+
+        self._dataset = dataset
+        self._obj = file
+        self._pivot = pivot
         self._device = device
+        self._total_images = total_images
 
     def __len__(self) -> int:
         """return the amount of files"""
-        return self._total
+        return self._total_images
 
     def _to_tensor(self, loaded_file:np.array) -> torch.Tensor:
         """auxiliary method to map an np.array to tensor in the correct device and data type"""
@@ -58,8 +71,13 @@ class ImagesDataset(Dataset):
 
     def __getitem__(self, index:int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Get an especific value inside the dataset with its label"""
-        input_data = self._to_tensor(self._obj[f"{index}"][()])
-        label = torch.from_numpy(np.array(json.loads(self._dataset.row(index, named=True)["result"]), dtype=np.float16)).to(self._device)
+        shifted_index = index+self._pivot
+        input_data = self._to_tensor(self._obj[f"{shifted_index}"][()])
+
+        dataset_data = self._dataset.slice(length=1, offset=index).collect()
+        result = json.loads(dataset_data["result"].item(0))
+
+        label = torch.from_numpy(np.array(result, dtype=np.float16)).to(self._device)
         return input_data, label
 
 class Downsample(torch.nn.Module):
@@ -118,7 +136,7 @@ class Model(torch.nn.Module):
         self.pool1 = nn.MaxPool2d(2, stride=2)
         self.pool2 = nn.AvgPool2d(3, stride=2)
 
-        self.out_neurons = 512*9*18
+        self.out_neurons = 512*6*7
         self.fc1 = nn.Linear(self.out_neurons, 32)
 
         self.blocks = nn.ModuleList([
@@ -282,11 +300,33 @@ def train(device:Device, checkpoint:Checkpoint):
 
     model = get_model(device, checkpoint.model)
 
-    train_data = ImagesDataset(device, IMAGES_TRAIN, DATASET_FILE)
-    test_data = ImagesDataset(device, IMAGES_TEST, DATASET_FILE)
+    dataset = pl.scan_csv(DATASET_FILE, schema=get_schema())
+
+    h5_file = h5py.File(IMAGES_H5_FILE, "r")
+    total_images = len(h5_file)
+
+    # the amount of images for TRAINING, TESTING AND EVALUATING
+    max_train = int(TRAIN_PERCENTAGE*total_images)
+    max_test = int(TEST_PERCENTAGE*total_images)
+    max_eval = int(EVAL_PERCENTAGE*total_images)
+
+    # the starting index for images per dataset split
+    pivot_training_index = 0
+    pivot_testing_index = max_train - 1
+    pivot_evaluating_index = total_images - max_eval - 1
+
+    # split dataset (csv file) into sections
+    train_dataset = dataset.slice(length=max_train, offset=pivot_training_index)
+    test_dataset = dataset.slice(length=max_test, offset=pivot_testing_index)
+    eval_dataset = dataset.slice(length=max_eval, offset=pivot_evaluating_index)
+
+    train_data = ImagesDataset(device, h5_file, train_dataset, max_train, pivot_training_index)
+    test_data = ImagesDataset(device, h5_file, test_dataset, max_test, pivot_testing_index)
+    eval_data = ImagesDataset(device, h5_file, eval_dataset, max_eval, pivot_evaluating_index)
     
     data_loader_train = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
     data_loader_test = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
+    data_loader_eval = DataLoader(eval_data, batch_size=BATCH_SIZE, shuffle=True)
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
     lr = 0.1
@@ -318,8 +358,8 @@ def train(device:Device, checkpoint:Checkpoint):
                loss = loss_fn(output.log(),label)
                running_loss += loss
 
-        avg_loss = running_loss/(i+1)
-        print("%sAVG: %f%s"%(Colors.MAGENTAFG, avg_loss, Colors.ENDC))
+        avg_loss = running_loss/max_test
+        print("%sAVG Test: %f%s"%(Colors.MAGENTAFG, avg_loss, Colors.ENDC))
 
         if avg_loss < best_loss:
             best_loss = avg_loss
@@ -333,6 +373,8 @@ def train(device:Device, checkpoint:Checkpoint):
             opt.state_dict(),
             scheduler.state_dict()
         )
+
+    h5_file.close()
 
     return model
 
@@ -350,6 +392,10 @@ def get_device() -> Device:
     print("%susing: %s device %s"%(Colors.GREENBG, device, Colors.ENDC))
 
     return device
+
+def get_RMSE(c):
+    # squared_diff_sum = torch.sqrt()
+
 
 def get_checkpoint_arg() -> Optional[str]:
     """
@@ -372,9 +418,12 @@ def run_debug_experiemnt():
     checkpoint_path = get_checkpoint_arg()     
     checkpoint = Checkpoint(checkpoint_path)
     checkpoint.load()
+    
+    dataset = pl.scan_csv(DATASET_FILE, schema=get_schema())
+    h5_file = h5py.File(IMAGES_H5_FILE, "r")
 
     model = get_model(device, checkpoint.model)
-    test = ImagesDataset(device, IMAGES_TRAIN, DATASET_FILE)
+    test = ImagesDataset(device, h5_file, dataset, len(h5_file), 0)
     test_loader = DataLoader(test, batch_size=1, shuffle=True)
     model.train(False)
     model.eval()
@@ -398,6 +447,7 @@ def setup_and_run_training():
     checkpoint = Checkpoint(checkpoint_path)
     checkpoint.load()
 
+    # TODO: USE PYTORCH SCRIPTING (JIT)
     model = train(device,checkpoint)
     model.save() # save best model
     model.eval()
