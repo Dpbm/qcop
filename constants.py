@@ -28,6 +28,9 @@ GHZ_FILE = os.path.join(TARGET_FOLDER, "ghz.pth")
 GHZ_IMAGE_FILE = os.path.join(TARGET_FOLDER, "ghz.jpeg")
 GHZ_PRED_FILE = os.path.join(TARGET_FOLDER,"ghz-prediction.pth")
 
+HISTORY_FILE = os.path.join(TARGET_FOLDER, "history.json")
+OUTPUT_PLOT_FILE = os.path.join(TARGET_FOLDER, "training_progress.png")
+
 NEW_DIM = (500, 500)
 
 TRAIN_PERCENTAGE = 0.7

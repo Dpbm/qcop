@@ -1,6 +1,6 @@
 """Train ResNet based model."""
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Any
 from collections import OrderedDict
 import sys
 import os
@@ -29,7 +29,9 @@ from constants import (
     GHZ_PRED_FILE,
     TRAIN_PERCENTAGE,
     TEST_PERCENTAGE,
-    EVAL_PERCENTAGE
+    EVAL_PERCENTAGE,
+    HISTORY_FILE,
+    OUTPUT_PLOT_FILE
 )
 from helpers import debug, PlotImages
 from colors import Colors
@@ -57,7 +59,6 @@ class ImagesDataset(Dataset):
         self._pivot = pivot
         self._device = device
         self._total_images = total_images
-
     def __len__(self) -> int:
         """return the amount of files"""
         return self._total_images
@@ -241,6 +242,61 @@ class Checkpoint:
         }
         torch.save(checkpoint, path)
 
+class History:
+    """Class in charge for saving the progress of training the model"""
+    def __init__(self,history_file:FilePath):
+        self._data = {
+            "test":[],
+            "rmse":[]
+        }
+        self._file_path = history_file
+
+    def _add_to_key(self, key:str, value:Any):
+        """add value to history"""
+        self._data[key].append(value)
+
+    def add_test_progress(self, value:float):
+        """Updated test loss progress"""
+        self._add_to_key("test",value)
+    
+    def add_rmse_progress(self, value:float):
+        """Updated rmse progress"""
+        self._add_to_key("rmse",value)
+
+    def save(self):
+        """Save dict to json file"""
+
+        print("%sSaving history file: %s...%s"%(Colors.GREENBG, self._file_path, Colors.ENDC))        
+
+        with open(self._file_path, "w") as file:
+            json.dump(self._data, file)
+
+    def load(self):
+        """Load json into dict"""
+        
+        if not os.path.exists(self._file_path):
+            return
+
+        print("%sLoading history file: %s...%s"%(Colors.YELLOWFG, self._file_path, Colors.ENDC))        
+
+        with open(self._file_path, "r") as file:
+            self._data = json.load(file)
+
+    def plot(self):
+        """Plot history"""
+
+        import matplotlib.pyplot as plt
+
+        x = len(self._data["test"])
+
+        plt.plot(x, self._data["test"])
+        plt.plot(x, self._data["rmse"])
+        plt.grid()
+        plt.title("Training progress")
+        plt.xlabel("Epochs")
+        plt.legend(["test", "rmse"])
+        plt.savefig(OUTPUT_PLOT_FILE, bbox_inches="tight")
+        plt.show()
 
 
 def one_epoch(
@@ -328,6 +384,9 @@ def train(device:Device, checkpoint:Checkpoint):
     data_loader_test = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
     data_loader_eval = DataLoader(eval_data, batch_size=BATCH_SIZE, shuffle=True)
 
+    history = History(HISTORY_FILE)
+    history.load()
+
     loss_fn = nn.KLDivLoss(reduction="batchmean")
     lr = 0.1
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
@@ -351,19 +410,33 @@ def train(device:Device, checkpoint:Checkpoint):
         model.eval()
         
         running_loss = 0.0
+        targets = []
+        outputs = []
         with torch.no_grad():
             for i, dataset in enumerate(data_loader_test):
                data, label = dataset
                output = model(data)
+
+               outputs.append(output)
+               targets.append(torch.Tensor(label))
+
                loss = loss_fn(output.log(),label)
                running_loss += loss
 
         avg_loss = running_loss/max_test
-        print("%sAVG Test: %f%s"%(Colors.MAGENTAFG, avg_loss, Colors.ENDC))
+        rmse = get_RMSE(targets, outputs)
+
+        history.add_test_progress(float(avg_loss))
+        history.add_rmse_progress(float(rmse))
+
+        history.save()
+
+        print("%sAVG loss Test: %f%s"%(Colors.MAGENTAFG, avg_loss, Colors.ENDC))
+        print("%sRMSE: %f%s"%(Colors.MAGENTAFG, rmse, Colors.ENDC))
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            print("%sBest loss: %d%s"%(Colors.GREENBG, best_loss, Colors.ENDC))
+            print("%sBest loss: %f%s"%(Colors.GREENBG, best_loss, Colors.ENDC))
         
         
         # save a checkpoint after every epoch
@@ -374,11 +447,34 @@ def train(device:Device, checkpoint:Checkpoint):
             scheduler.state_dict()
         )
 
+    eval_loss = 0.0
+    targets = []
+    outputs = []
+    with torch.no_grad():
+        for i, dataset in enumerate(data_loader_eval):
+            data, label = dataset
+            output = model(data)
+
+            outputs.append(output)
+            targets.append(torch.Tensor(label))
+
+            loss = loss_fn(output.log(),label)
+            eval_loss += loss
+
+    avg_loss = eval_loss/max_eval
+    rmse = get_RMSE(targets, outputs)
+
+    print("%sAVG loss Eval: %f%s"%(Colors.MAGENTAFG, avg_loss, Colors.ENDC))
+    print("%sRMSE Eval: %f%s"%(Colors.MAGENTAFG, rmse, Colors.ENDC))
+
     h5_file.close()
+
+    history.plot()
 
     return model
 
 def get_device() -> Device:
+
     """
     Return the device to be used with pytorch
     """
@@ -393,8 +489,11 @@ def get_device() -> Device:
 
     return device
 
-def get_RMSE(c):
-    # squared_diff_sum = torch.sqrt()
+def get_RMSE(targets:List[torch.Tensor], outputs:List[torch.Tensor]):
+    """Root Mean Squared Error."""
+    diff_sum = sum([ (torch.sum(target-output))**2 for target,output in zip(targets, outputs) ])
+    n = len(targets)
+    return torch.sqrt((1/n) * diff_sum)
 
 
 def get_checkpoint_arg() -> Optional[str]:

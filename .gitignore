@@ -9,3 +9,4 @@ model_*
 *.pth
 *.pt
 *.jpeg
+history.json

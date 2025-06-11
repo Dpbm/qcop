@@ -1,4 +1,4 @@
-clean-all: clean-dataset clean-pred clean-ghz clean-model clean-checkpoints
+clean-all: clean-dataset clean-pred clean-ghz clean-model clean-checkpoints clean-history
 
 clean-dataset:
 	rm -rf dataset/ dataset.csv *.h5 dataset-images.zip
@@ -14,6 +14,9 @@ clean-model:
 
 clean-checkpoints:
 	rm -rf checkpoint_*
+
+clean-history:
+	rm -rf history.json
 
 gen-dataset: 
 	python dataset.py 
