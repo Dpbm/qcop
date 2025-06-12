@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: 950b510336a923e2f7a4c9e35f9ea336d6ca43e6cb701ad0c4671a449eee495a
+    linux-64: d5dc6a9a0cbeec978d7fe04c99759b76d7836da36f835ebbe32cf769709aee1f
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -1541,6 +1541,29 @@ package:
     sha256: a920f9cf2abdf6e493c519492d892c362007f113c94da4c239ae88429835bad1
   category: main
   optional: false
+- name: mypy
+  version: 1.16.0
+  manager: pip
+  platform: linux-64
+  dependencies:
+    typing-extensions: '>=4.6.0'
+    mypy-extensions: '>=1.0.0'
+    pathspec: '>=0.9.0'
+  url: https://files.pythonhosted.org/packages/6f/5f/b392f7b4f659f5b619ce5994c5c43caab3d80df2296ae54fa888b3d17f5a/mypy-1.16.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl
+  hash:
+    sha256: b4968f14f44c62e2ec4a038c8797a87315be8df7740dc3ee8d3bfe1c6bf5dba8
+  category: main
+  optional: false
+- name: mypy-extensions
+  version: 1.1.0
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl
+  hash:
+    sha256: 1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505
+  category: main
+  optional: false
 - name: networkx
   version: 3.4.2
   manager: pip
@@ -2549,6 +2572,28 @@ package:
   url: https://files.pythonhosted.org/packages/11/53/ce18470914ab6cfbec9384ee565d23c4d1c55f0548160b1c7b33000b11fd/triton-3.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
   hash:
     sha256: b68c778f6c4218403a6bd01be7484f6dc9e20fe2083d22dd8aef33e3b87a10a3
+  category: main
+  optional: false
+- name: types-requests
+  version: 2.32.4.20250611
+  manager: pip
+  platform: linux-64
+  dependencies:
+    urllib3: '>=2'
+  url: https://files.pythonhosted.org/packages/3d/ea/0be9258c5a4fa1ba2300111aa5a0767ee6d18eb3fd20e91616c12082284d/types_requests-2.32.4.20250611-py3-none-any.whl
+  hash:
+    sha256: ad2fe5d3b0cb3c2c902c8815a70e7fb2302c4b8c1f77bdcd738192cdb3878072
+  category: main
+  optional: false
+- name: types-tqdm
+  version: 4.67.0.20250516
+  manager: pip
+  platform: linux-64
+  dependencies:
+    types-requests: '*'
+  url: https://files.pythonhosted.org/packages/3b/92/df621429f098fc573a63a8ba348e731c3051b397df0cff278f8887f28d24/types_tqdm-4.67.0.20250516-py3-none-any.whl
+  hash:
+    sha256: 1dd9b2c65273f2342f37e5179bc6982df86b6669b3376efc12aef0a29e35d36d
   category: main
   optional: false
 - name: typing-extensions
