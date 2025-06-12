@@ -209,6 +209,10 @@ class Checkpoint:
         print("%sLoading checkpoint from: %s...%s"%(Colors.MAGENTABG, self._path, Colors.ENDC))
         self._data = torch.load(self._path)
 
+    def was_provided(self) -> bool:
+        """Returns true if user has provided a checkpoint to be loaded"""
+        return self._path is not None
+
     @property
     def model(self) -> Optional[StateDict]:
         """return the model weights"""
@@ -385,7 +389,8 @@ def train(device:Device, checkpoint:Checkpoint):
     data_loader_eval = DataLoader(eval_data, batch_size=BATCH_SIZE, shuffle=True)
 
     history = History(HISTORY_FILE)
-    history.load()
+    if checkpoint.was_provided():
+        history.load()
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
     lr = 0.1
@@ -502,7 +507,7 @@ def get_checkpoint_arg() -> Optional[str]:
     checkpoint path.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", type=str)
+    parser.add_argument("--checkpoint", type=str, default="")
     args = parser.parse_args(sys.argv[1:])
     checkpoint_path = args.checkpoint if args.checkpoint else None
     return checkpoint_path
