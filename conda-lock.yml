@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: 163d44745906664097a148bca8f27e495083d207f95390dc27a48fa02ba280cf
+    linux-64: 950b510336a923e2f7a4c9e35f9ea336d6ca43e6cb701ad0c4671a449eee495a
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -153,10 +153,10 @@ package:
   dependencies:
     __glibc: '>=2.17,<3.0.a0'
     libgcc: '>=13'
-  url: https://conda.anaconda.org/conda-forge/linux-64/liblzma-5.8.1-hb9d3cd8_1.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/liblzma-5.8.1-hb9d3cd8_2.conda
   hash:
-    md5: a76fd702c93cd2dfd89eff30a5fd45a8
-    sha256: eeff241bddc8f1b87567dd6507c9f441f7f472c27f0860a07628260c000ef27c
+    md5: 1a580f7796c7bf6393fddb8bbbde58dc
+    sha256: f2591c0069447bbe28d4d696b7fcb0c5bd0b4ac582769b89addbcf26fb3430d8
   category: main
   optional: false
 - name: libnsl
@@ -172,17 +172,17 @@ package:
   category: main
   optional: false
 - name: libsqlite
-  version: 3.49.2
+  version: 3.50.1
   manager: conda
   platform: linux-64
   dependencies:
     __glibc: '>=2.17,<3.0.a0'
     libgcc: '>=13'
     libzlib: '>=1.3.1,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.49.2-hee588c1_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.50.1-hee588c1_0.conda
   hash:
-    md5: 93048463501053a00739215ea3f36324
-    sha256: 525d4a0e24843f90b3ff1ed733f0a2e408aa6dd18b9d4f15465595e078e104a2
+    md5: 96a7e36bff29f1d0ddf5b771e0da373a
+    sha256: cd15ab1b9f0d53507e7ad7a01e52f6756ab3080bf623ab0e438973b6e4dba3c0
   category: main
   optional: false
 - name: libuuid
@@ -264,7 +264,7 @@ package:
   category: main
   optional: false
 - name: python
-  version: 3.12.10
+  version: 3.12.11
   manager: conda
   platform: linux-64
   dependencies:
@@ -276,7 +276,7 @@ package:
     libgcc: '>=13'
     liblzma: '>=5.8.1,<6.0a0'
     libnsl: '>=2.0.1,<2.1.0a0'
-    libsqlite: '>=3.49.1,<4.0a0'
+    libsqlite: '>=3.50.0,<4.0a0'
     libuuid: '>=2.38.1,<3.0a0'
     libxcrypt: '>=4.4.36'
     libzlib: '>=1.3.1,<2.0a0'
@@ -285,10 +285,10 @@ package:
     readline: '>=8.2,<9.0a0'
     tk: '>=8.6.13,<8.7.0a0'
     tzdata: ''
-  url: https://conda.anaconda.org/conda-forge/linux-64/python-3.12.10-h9e4cc4f_0_cpython.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/python-3.12.11-h9e4cc4f_0_cpython.conda
   hash:
-    md5: a41d26cd4d47092d683915d058380dec
-    sha256: 4dc1da115805bd353bded6ab20ff642b6a15fcc72ac2f3de0e1d014ff3612221
+    md5: 94206474a5608243a10c92cefbe0908f
+    sha256: 6cca004806ceceea9585d4d655059e951152fc774a471593d4f5138e6a54c81d
   category: main
   optional: false
 - name: readline
@@ -305,15 +305,15 @@ package:
   category: main
   optional: false
 - name: setuptools
-  version: 80.8.0
+  version: 80.9.0
   manager: conda
   platform: linux-64
   dependencies:
     python: '>=3.9'
-  url: https://conda.anaconda.org/conda-forge/noarch/setuptools-80.8.0-pyhff2d567_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/setuptools-80.9.0-pyhff2d567_0.conda
   hash:
-    md5: ea075e94dc0106c7212128b6a25bbc4c
-    sha256: 56ce31d15786e1df2f1105076f3650cd7c1892e0afeeb9aa92a08d2551af2e34
+    md5: 4de79c071274a53dcaf2a8c749d1499e
+    sha256: 972560fcf9657058e3e1f97186cc94389144b46dbdf58c807ce62e83f977e863
   category: main
   optional: false
 - name: tk
@@ -711,6 +711,16 @@ package:
     sha256: 8c8019e53b6302967d4e8329a504acf75e7bc46130291d30188a6e4e58162516
   category: main
   optional: false
+- name: cachetools
+  version: 6.0.0
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/6a/c3/8bb087c903c95a570015ce84e0c23ae1d79f528c349cbc141b5c4e250293/cachetools-6.0.0-py3-none-any.whl
+  hash:
+    sha256: 82e73ba88f7b30228b5507dce1a1f878498fc669d972aef2dde4f3a3c24f103e
+  category: main
+  optional: false
 - name: certifi
   version: 2025.4.26
   manager: pip
@@ -730,6 +740,16 @@ package:
   url: https://files.pythonhosted.org/packages/b2/d5/da47df7004cb17e4955df6a43d14b3b4ae77737dff8bf7f8f333196717bf/cffi-1.17.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
   hash:
     sha256: b62ce867176a75d03a665bad002af8e6d54644fad99a3c70905c543130e39d93
+  category: main
+  optional: false
+- name: chardet
+  version: 5.2.0
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/38/6f/f5fbc992a329ee4e0f288c1fe0e2ad9485ed064cac731ed2fe47dcc38cbf/chardet-5.2.0-py3-none-any.whl
+  hash:
+    sha256: e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970
   category: main
   optional: false
 - name: charset-normalizer
@@ -886,6 +906,16 @@ package:
   url: https://files.pythonhosted.org/packages/50/3d/9373ad9c56321fdab5b41197068e1d8c25883b3fea29dd361f9b55116869/dill-0.4.0-py3-none-any.whl
   hash:
     sha256: 44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049
+  category: main
+  optional: false
+- name: distlib
+  version: 0.3.9
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/91/a1/cf2472db20f7ce4a6be1253a81cfdf85ad9c7885ffbed7047fb72c24cf87/distlib-0.3.9-py2.py3-none-any.whl
+  hash:
+    sha256: 47f8c22fd27c27e25a65601af709b38e4f0a45ea4fc2e710f65755fa8caaaf87
   category: main
   optional: false
 - name: dnspython
@@ -1869,6 +1899,16 @@ package:
     sha256: b2dbea1012ccb784a65349f57bbc93730b96e85b42e9bf7b01ef40443db720b4
   category: main
   optional: false
+- name: platformdirs
+  version: 4.3.8
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/fe/39/979e8e21520d4e47a0bbe349e2713c0aac6f3d853d0e5b34d76206c439aa/platformdirs-4.3.8-py3-none-any.whl
+  hash:
+    sha256: ff7059bb7eb1179e2685604f4aaf157cfd9535242bd23742eadc3c13542139b4
+  category: main
+  optional: false
 - name: pluggy
   version: 1.6.0
   manager: pip
@@ -2003,6 +2043,17 @@ package:
   url: https://files.pythonhosted.org/packages/05/e7/df2285f3d08fee213f2d041540fa4fc9ca6c2d44cf36d3a035bf2a8d2bcc/pyparsing-3.2.3-py3-none-any.whl
   hash:
     sha256: a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf
+  category: main
+  optional: false
+- name: pyproject-api
+  version: 1.9.1
+  manager: pip
+  platform: linux-64
+  dependencies:
+    packaging: '>=25'
+  url: https://files.pythonhosted.org/packages/ef/e6/c293c06695d4a3ab0260ef124a74ebadba5f4c511ce3a4259e976902c00b/pyproject_api-1.9.1-py3-none-any.whl
+  hash:
+    sha256: 7d6238d92f8962773dd75b5f0c4a6a27cce092a14b623b811dba656f3b628948
   category: main
   optional: false
 - name: pyspnego
@@ -2240,6 +2291,16 @@ package:
     sha256: 2c2cd1a4b0c2b8c5e31ffff50d09f39906fe351389ba143c195566056c13a7ea
   category: main
   optional: false
+- name: ruff
+  version: 0.11.13
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/75/f0/782e7d681d660eda8c536962920c41309e6dd4ebcea9a2714ed5127d44bd/ruff-0.11.13-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  hash:
+    sha256: 4ffbc82d70424b275b089166310448051afdc6e914fdab90e08df66c43bb5ca9
+  category: main
+  optional: false
 - name: rustworkx
   version: 0.16.0
   manager: pip
@@ -2451,6 +2512,25 @@ package:
     sha256: ce4dc334ebd508de2c534817c9388e928bc2500cf981906ae8d6e2ca3bf4727a
   category: main
   optional: false
+- name: tox
+  version: 4.26.0
+  manager: pip
+  platform: linux-64
+  dependencies:
+    cachetools: '>=5.5.1'
+    chardet: '>=5.2'
+    colorama: '>=0.4.6'
+    filelock: '>=3.16.1'
+    packaging: '>=24.2'
+    platformdirs: '>=4.3.6'
+    pluggy: '>=1.5'
+    pyproject-api: '>=1.8'
+    virtualenv: '>=20.31'
+  url: https://files.pythonhosted.org/packages/de/14/f58b4087cf248b18c795b5c838c7a8d1428dfb07cb468dad3ec7f54041ab/tox-4.26.0-py3-none-any.whl
+  hash:
+    sha256: 75f17aaf09face9b97bd41645028d9f722301e912be8b4c65a3f938024560224
+  category: main
+  optional: false
 - name: tqdm
   version: 4.67.1
   manager: pip
@@ -2531,6 +2611,19 @@ package:
   url: https://files.pythonhosted.org/packages/6b/11/cc635220681e93a0183390e26485430ca2c7b5f9d33b15c74c2861cb8091/urllib3-2.4.0-py3-none-any.whl
   hash:
     sha256: 4e16665048960a0900c702d4a66415956a584919c03361cac9f1df5c5dd7e813
+  category: main
+  optional: false
+- name: virtualenv
+  version: 20.31.2
+  manager: pip
+  platform: linux-64
+  dependencies:
+    distlib: '>=0.3.7,<1'
+    filelock: '>=3.12.2,<4'
+    platformdirs: '>=3.9.1,<5'
+  url: https://files.pythonhosted.org/packages/f3/40/b1c265d4b2b62b58576588510fc4d1fe60a86319c8de99fd8e9fec617d2c/virtualenv-20.31.2-py3-none-any.whl
+  hash:
+    sha256: 36efd0d9650ee985f0cad72065001e66d49a6f24eb44d98980f630686243cf11
   category: main
   optional: false
 - name: werkzeug

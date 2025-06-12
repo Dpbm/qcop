@@ -1,0 +1,4 @@
+ruff
+tox
+mypy
+types-tqdm

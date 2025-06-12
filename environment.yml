@@ -21,5 +21,9 @@ dependencies:
       - apache-airflow==2.11.0
       - apache-airflow-providers-standard
       - pandas
+      - ruff
+      - tox
+      - mypy
+      - types-tqdm
 platforms:
   - linux-64

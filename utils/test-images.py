@@ -5,7 +5,6 @@ import sys
 
 from image import look_transformation
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -16,5 +15,3 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
 
     look_transformation(args.image, args.width, args.height)
-
-

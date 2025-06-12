@@ -18,18 +18,8 @@ clean-checkpoints:
 clean-history:
 	rm -rf history.json
 
-gen-dataset: 
-	python dataset.py 
-
-train: 
-	python train.py --checkpoint "$(CHECKPOINT)"
-
 pack:
 	zip -r dataset-images.zip dataset/
-
-
-ghz: clean-ghz
-	python ghz.py
 
 lock: 
 	conda-lock -f environment.yml

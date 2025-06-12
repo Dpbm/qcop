@@ -1,0 +1,22 @@
+name: Run tox checks
+
+on: [push]
+
+jobs:
+  worker:
+    name: Run checks
+    runs-on: ubuntu-22.04
+
+    steps:
+        - uses: actions/checkout@v4
+
+        - uses: actions/setup-python@v5
+          with:
+              python-version: '3.12'
+
+        - name: install dependencies
+          run: |
+              pip install -r requirements.txt -r dev-requirements.txt
+
+        - name: Run tox checks
+          run: tox

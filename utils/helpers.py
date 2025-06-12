@@ -3,52 +3,53 @@
 from typing import List, Optional
 import random
 
-import numpy as np
-import matplotlib.pyplot as plt
 import torch
 
 from constants import DEBUG
+
 
 class PlotImages:
     """Plot Result images from layer"""
 
     @staticmethod
-    def plot_filters(images:torch.Tensor, title:Optional[str]=None):
+    def plot_filters(images: torch.Tensor, title: Optional[str] = None):
         """Plot every image from current layer"""
+
+        import numpy as np
+        import matplotlib.pyplot as plt
 
         if not DEBUG:
             return
 
-
         images = images.cpu().detach().numpy()[0]
 
         cols = 4
-        rows = int(np.ceil(images.shape[0]/cols))
+        rows = int(np.ceil(images.shape[0] / cols))
 
-        plt.figure(figsize=(40,20))
+        plt.figure(figsize=(40, 20))
 
         if title is not None:
             plt.title(title)
 
-        plt.axis('off')
+        plt.axis("off")
 
-
-        for i,image in enumerate(images):
-            ax = plt.subplot(rows,cols,i+1)
-            ax.axis('off')
+        for i, image in enumerate(images):
+            ax = plt.subplot(rows, cols, i + 1)
+            ax.axis("off")
             ax.imshow(image)
         plt.show()
 
 
 def debug(*inp):
     """Print debug info"""
-    if(not DEBUG):
+    if not DEBUG:
         return
 
     print("[!] ", *inp)
 
-def get_measurements(n_qubits:int) -> List[int]:
+
+def get_measurements(n_qubits: int) -> List[int]:
     """Return a list of qubits to be measured"""
-    total_measurements = random.randint(1,n_qubits)
+    total_measurements = random.randint(1, n_qubits)
     qubits = list(range(n_qubits))
     return random.sample(qubits, total_measurements)

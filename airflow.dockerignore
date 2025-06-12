@@ -1,5 +1,8 @@
 *
 !dags/
-!*.py
+!ai/
+!export/
+!generate/
+!utils/
 !Makefile
 !requirements.txt

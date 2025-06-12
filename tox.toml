@@ -1,0 +1,21 @@
+requires = ["tox>=4"]
+env_list = ["format_code", "lint_check", "type_check", "py3.12"]
+
+[env.format_code]
+description = "Ruff - format code"
+skip_install = false
+deps = ["ruff"]
+commands = [[ "ruff", { replace = "posargs", default = ["format"], extend = true} ]]
+
+[env.lint_check]
+description = "Ruff - check code"
+skip_install = false
+deps = ["ruff"]
+commands = [[ "ruff", { replace = "posargs", default = ["check"], extend = true} ]]
+
+[env.type_check]
+description = "MYPY - type checking"
+skip_install = false
+deps = ["mypy", "types-tqdm"]
+commands = [[ "mypy", { replace = "posargs", default = ["."], extend = true} ]]
+
