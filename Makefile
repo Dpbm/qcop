@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 clean-all: clean-dataset clean-pred clean-ghz clean-model clean-checkpoints clean-history
 
 clean-dataset:
@@ -23,3 +25,6 @@ pack:
 
 lock: 
 	conda-lock -f environment.yml
+
+airflow-up:
+	source airflow-setup-test.sh && docker compose down && docker compose build && docker compose up -d

@@ -25,7 +25,7 @@ from utils.constants import dataset_path, dataset_file, images_h5_file
 from utils.datatypes import FilePath, df_schema, Dimensions
 from utils.image import transform_image
 from utils.colors import Colors
-from utils.random_circuit import get_random_circuit
+from generate.random_circuit import get_random_circuit
 from utils.helpers import get_measurements
 
 Schema = Dict[str, Any]

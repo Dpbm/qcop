@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Waiting for PostgreSQL to start..."
 until pg_isready -U $POSTGRES_USER; do
 	echo "Not ready yet..."

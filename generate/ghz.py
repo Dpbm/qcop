@@ -4,9 +4,9 @@ from qiskit import QuantumCircuit
 from PIL import Image
 import torch
 
-from image import transform_image
+from utils.image import transform_image
 from args.parser import parse_args
-from constants import ghz_image_file, ghz_file
+from utils.constants import ghz_image_file, ghz_file
 from utils.datatypes import FilePath, Dimensions
 
 

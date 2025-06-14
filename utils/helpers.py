@@ -5,7 +5,7 @@ import random
 
 import torch
 
-from constants import DEBUG
+from utils.constants import DEBUG
 
 
 class PlotImages:

@@ -1,8 +1,9 @@
 *
-!dags/
 !ai/
 !export/
 !generate/
 !utils/
+!args/
 !Makefile
 !requirements.txt
+!airflow-entrypoint.sh

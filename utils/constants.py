@@ -31,7 +31,7 @@ ghz_file = lambda target_folder: os.path.join(target_folder, "ghz.pth")
 ghz_image_file = lambda target_folder: os.path.join(target_folder, "ghz.jpeg")
 ghz_pred_file = lambda target_folder: os.path.join(target_folder, "ghz-prediction.pth")
 ghz_image_file = lambda target_folder: os.path.join(target_folder, "ghz.jpeg")
-ghz_history_file = lambda target_folder: os.path.join(target_folder, "history.json")
+history_file = lambda target_folder: os.path.join(target_folder, "history.json")
 output_plot_file = lambda target_folder: os.path.join(
     target_folder, "training_progress.png"
 )

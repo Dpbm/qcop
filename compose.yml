@@ -24,14 +24,13 @@ services:
     build:
       context: .
       dockerfile: airflow.Dockerfile
-      args:
-        - USER=${AIRFLOW_USERNAME}
-        - PASSWORD=${AIRFLOW_PASSWORD}
-        - EMAIL=${AIRFLOW_EMAIL}
     volumes:
       - ./data:/home/airflow/data
       - ./dags:/opt/airflow/dags
     environment:
+      - USER=${AIRFLOW_USERNAME}
+      - PASSWORD=${AIRFLOW_PASSWORD}
+      - EMAIL=${AIRFLOW_EMAIL}
       - PYTHONPATH=/home/airflow/project
       - TARGET_FOLDER=/home/airflow/data
       - TZ=America/Sao_Paulo
