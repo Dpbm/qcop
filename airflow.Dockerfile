@@ -7,7 +7,10 @@ RUN ${PIPENV} install -r requirements.txt
 
 
 
-FROM busybox:1.37.0 AS entry
+FROM debian:bookworm-slim AS entry
+
+RUN apt update && apt install zip make -y
+
 WORKDIR /
 COPY airflow-entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
@@ -18,6 +21,10 @@ COPY --from=setup /proj-venv/lib/python3.12/site-packages/ /home/airflow/.local/
 
 WORKDIR /home/airflow/project
 COPY . .
+
+WORKDIR /home/airflow/.local/bin
+COPY --from=entry --chown=airflow:root /usr/bin/zip zip
+COPY --from=entry --chown=airflow:root /usr/bin/make make
 
 WORKDIR /
 COPY --from=entry /entrypoint.sh .

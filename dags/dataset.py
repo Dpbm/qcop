@@ -22,7 +22,6 @@ from utils.constants import (
     DEFAULT_SHOTS,
     DEFAULT_DATASET_SIZE,
     DEFAULT_THREADS,
-    dataset_file,
 )
 from generate.ghz import gen_circuit
 
@@ -48,7 +47,7 @@ with DAG(
     """
 
     gen_df = PythonOperator(
-        task_id="gen_df", python_callable=start_df, op_args=[dataset_file(folder)]
+        task_id="gen_df", python_callable=start_df, op_args=[folder]
     )
     gen_df.doc_md = """
     Generate an empty dataframe and saves it as an csv file.
@@ -93,7 +92,8 @@ with DAG(
     with resized and normalized images.
     """
 
-    pack_img = BashOperator(task_id="pack_images", bash_command="make pack")
+    command = f"zip -r {folder}/dataset-images.zip {folder}/dataset/"
+    pack_img = BashOperator(task_id="pack_images", bash_command=command)
 
     pack_img.doc_md = """
     This task is meant to get all .jpeg images that were generated, and pack them
@@ -103,7 +103,7 @@ with DAG(
     gen_ghz = PythonOperator(
         task_id="gen_ghz",
         python_callable=gen_circuit,
-        op_args=[DEFAULT_NUM_QUBITS, DEFAULT_TARGET_FOLDER, DEFAULT_NEW_DIM],
+        op_args=[DEFAULT_NUM_QUBITS, folder, DEFAULT_NEW_DIM],
     )
 
     gen_ghz.doc_md = """

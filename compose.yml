@@ -27,6 +27,13 @@ services:
     volumes:
       - ./data:/home/airflow/data
       - ./dags:/opt/airflow/dags
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
+              driver: nvidia 
     environment:
       - USER=${AIRFLOW_USERNAME}
       - PASSWORD=${AIRFLOW_PASSWORD}

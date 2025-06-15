@@ -131,7 +131,7 @@ def generate_images(
     total_gates: int,
     shots: int,
     dataset_size: int,
-    threads: int,
+    total_threads: int,
 ):
     """
     Generate multiple images and saves a dataframe with information about them.
@@ -152,7 +152,7 @@ def generate_images(
         while index < dataset_size:
             args = []
 
-            for i in range(threads):
+            for i in range(total_threads):
                 filename = "%d.jpeg" % (index)
                 circuit_image_path = os.path.join(base_dataset_path, filename)
 
@@ -168,13 +168,13 @@ def generate_images(
                 )
                 index += 1
 
-            with ThreadPoolExecutor(max_workers=threads) as pool:
+            with ThreadPoolExecutor(max_workers=total_threads) as pool:
                 threads = [pool.submit(generate_image, *arg) for arg in args]  # type:ignore
                 for future in as_completed(threads):  # type: ignore
                     tmp_df = create_df(future.result())
                     df.vstack(tmp_df, in_place=True)
 
-            progress.update(threads)
+            progress.update(total_threads)
     save_df(df, dataset_file_path)
 
 
@@ -217,12 +217,22 @@ def transform_images(target_folder: FilePath, new_dim: Dimensions):
             image_i += 1
 
 
-def crate_dataset_folder(folder: FilePath):
+def crate_dataset_folder(base_folder: FilePath):
     """Create a folder to store images for the dataset"""
-    os.makedirs(folder, exist_ok=True)
+    os.makedirs(dataset_path(base_folder), exist_ok=True)
 
 
-def create_df(data: Dict = {}) -> pl.DataFrame:
+default_df_data: CircuitResult = {
+    "index": pl.Series(),
+    "depth": pl.Series(),
+    "file": pl.Series(),
+    "measurements": pl.Series(),
+    "result": pl.Series(),
+    "hash": pl.Series(),
+}
+
+
+def create_df(data: CircuitResult = default_df_data) -> pl.DataFrame:
     """returns a Polars DataFrame schema"""
     return pl.DataFrame(data, schema=df_schema)
 
@@ -238,18 +248,18 @@ def save_df(df: pl.DataFrame, file_path: FilePath):
     df.write_csv(file_path)
 
 
-def start_df(file_path: FilePath):
+def start_df(base_file_path: FilePath):
     """generates an empty df and saves it on a csv file"""
     df = create_df()
-    save_df(df, file_path)
+    save_df(df, dataset_file(base_file_path))
 
 
 def main(args: Arguments):
     """generate, clean and save dataset and images"""
 
-    crate_dataset_folder(dataset_path(args.target_folder))
+    crate_dataset_folder(args.target_folder)
 
-    start_df(dataset_file(args.target_folder))
+    start_df(args.target_folder)
 
     generate_images(
         args.target_folder,

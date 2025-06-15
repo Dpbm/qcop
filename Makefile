@@ -1,27 +1,28 @@
 SHELL := /bin/bash
+TARGET_PATH ?= "."
 
 clean-all: clean-dataset clean-pred clean-ghz clean-model clean-checkpoints clean-history
 
 clean-dataset:
-	rm -rf dataset/ dataset.csv *.h5 dataset-images.zip
+	rm -rf $(TARGET_PATH)/dataset/ $(TARGET_PATH)/dataset.csv $(TARGET_PATH)/*.h5 $(TARGET_PATH)/dataset-images.zip
 
 clean-pred:
-	rm -rf ghz-prediction.pth
+	rm -rf $(TARGET_PATH)/ghz-prediction.pth
 
 clean-ghz:
-	rm -rf ghz.pth ghz.jpeg
+	rm -rf $(TARGET_PATH)/ghz.pth $(TARGET_PATH)/ghz.jpeg
 
 clean-model:
-	rm -rf model_*
+	rm -rf $(TARGET_PATH)/model_*
 
 clean-checkpoints:
-	rm -rf checkpoint_*
+	rm -rf $(TARGET_PATH)/checkpoint_*
 
 clean-history:
-	rm -rf history.json
+	rm -rf $(TARGET_PATH)/history.json
 
 pack:
-	zip -r dataset-images.zip dataset/
+	zip -r $(TARGET_PATH)/dataset-images.zip $(TARGET_PATH)/dataset/
 
 lock: 
 	conda-lock -f environment.yml

@@ -28,7 +28,7 @@ from utils.constants import (
 from utils.helpers import debug, PlotImages
 from utils.colors import Colors
 from utils.datatypes import FilePath, df_schema
-from args.parser import parse_args
+from args.parser import parse_args, Arguments
 
 StateDict = OrderedDict
 Device = str
@@ -566,13 +566,12 @@ def get_RMSE(targets: List[torch.Tensor], outputs: List[torch.Tensor]):
     return torch.sqrt((1 / n) * diff_sum)
 
 
-def run_debug_experiemnt():
+def run_debug_experiemnt(args: Arguments):
     """
     Run Manual tests.
     """
     device = get_device()
 
-    args = parse_args()
     checkpoint = Checkpoint(args.checkpoint)
     checkpoint.load()
 
@@ -593,14 +592,12 @@ def run_debug_experiemnt():
     print("%seval: %s%s" % (Colors.GREENBG, str(model(image)), Colors.ENDC))
 
 
-def setup_and_run_training():
+def setup_and_run_training(args: Arguments):
     """
     Setup and run a training task.
     """
 
     device = get_device()
-
-    args = parse_args()
 
     checkpoint = Checkpoint(args.checkpoint)
     checkpoint.load()
@@ -629,11 +626,14 @@ def main():
     """
     Setup environment and start experiments.
     """
+
+    args = parse_args()
+
     if DEBUG:
-        run_debug_experiemnt()
+        run_debug_experiemnt(args)
         return
 
-    setup_and_run_training()
+    setup_and_run_training(args)
 
 
 if __name__ == "__main__":
