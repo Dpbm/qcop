@@ -8,6 +8,7 @@ import argparse
 import kagglehub as kh
 
 from utils.datatypes import FilePath
+from utils.constants import MODEL_FILE_PREFIX, CHECKPOINT_FILE_PREFIX
 
 def upload_dataset(folder:FilePath):
     """
@@ -20,7 +21,13 @@ def upload_dataset(folder:FilePath):
         dataset_name, 
         folder, 
         version_notes=version,
-        ignore_patterns=["dataset/"]
+        ignore_patterns=[
+            "dataset/", 
+            "*.json", 
+            f"{MODEL_FILE_PREFIX}*", 
+            f"{CHECKPOINT_FILE_PREFIX}*", 
+            "*.png",
+        ]
     )
 
 def upload_model(folder:str):
@@ -35,7 +42,16 @@ def upload_model(folder:str):
         handle=model_name,
         local_model_dir=folder,
         version_notes=version,
-        ignore_patterns=["dataset/","ghz*","*.zip","*.h5","*.csv"]
+        ignore_patterns=[
+            "dataset/",
+            "ghz*",
+            "*.pth"
+            "*.zip",
+            "*.h5",
+            "*.csv",
+            "*.png",
+            "*.json"
+        ]
     )
 
 if __name__ == "__main__":

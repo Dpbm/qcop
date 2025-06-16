@@ -8,6 +8,7 @@ from huggingface_hub import HfApi
 
 from utils.datatypes import FilePath
 from export.helpers import get_latest_model
+from utils.constants import MODEL_FILE_PREFIX, CHECKPOINT_FILE_PREFIX
 
 def upload_dataset(folder:FilePath):
     """
@@ -21,7 +22,13 @@ def upload_dataset(folder:FilePath):
         folder_path=folder,
         repo_id=dataset_name,
         repo_type="dataset",
-        ignore_patterns=["dataset/"]
+        ignore_patterns=[
+            "dataset/", 
+            "*.json", 
+            f"{MODEL_FILE_PREFIX}*", 
+            f"{CHECKPOINT_FILE_PREFIX}*", 
+            "*.png",
+        ]
     )
 
 def upload_model(folder:str):

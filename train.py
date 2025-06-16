@@ -19,6 +19,7 @@ import h5py
 from utils.constants import (
     DEBUG,
     MODEL_FILE_PREFIX,
+    CHECKPOINT_FILE_PREFIX,
     dataset_file,
     images_h5_file,
     ghz_file,
@@ -265,7 +266,7 @@ class Checkpoint:
         scheduler: StateDict,
     ):
         """Save checkpoint data"""
-        path = os.path.join(folder, "checkpoint_%s.pth" % (time.ctime()))
+        path = os.path.join(folder, "%s%s.pth" % (CHECKPOINT_FILE_PREFIX, time.ctime()))
         print("%sSaving checkpoint at: %s...%s" % (Colors.MAGENTABG, path, Colors.ENDC))
         checkpoint = {
             "epoch": epoch,
