@@ -1,0 +1,53 @@
+services:
+  database:
+    container_name: db
+    hostname: db
+    image: dpbm32/qcopdb:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${ROOT_DB}
+      - POSTGRES_PASSWORD=${ROOT_PASS}
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    restart: always
+
+  pipeline:
+    container_name: airflow
+    depends_on: 
+      - database
+    ports:
+      - "8080:8080"
+    image: dpbm32/qcop:latest
+    volumes:
+      - ./data:/home/airflow/data
+      - ./dags:/opt/airflow/dags
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
+              driver: nvidia 
+    environment:
+      - USER=${AIRFLOW_USERNAME}
+      - PASSWORD=${AIRFLOW_PASSWORD}
+      - EMAIL=${AIRFLOW_EMAIL}
+      - KAGGLE_USERNAME=${KAGGLE_USERNAME}
+      - KAGGLE_KEY=${KAGGLE_KEY}
+      - KAGGLE_DATASET=${KAGGLE_DATASET}
+      - KAGGLE_MODEL=${KAGGLE_MODEL}
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_DATASET=${HF_DATASET}
+      - HF_MODEL_REPO=${HF_MODEL_REPO}
+      - PYTHONPATH=/home/airflow/project
+      - TARGET_FOLDER=/home/airflow/data
+      - TZ=America/Sao_Paulo # set your timezone
+      - PYTZDATA_TZDATADIR=/usr/share/zoneinfo
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=False
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - AIRFLOW_CONN_METADATA_DB=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
+    restart: always
+
