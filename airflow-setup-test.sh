@@ -19,6 +19,10 @@ export DB_PASSWORD="airflowpass"
 
 export KAGGLE_USERNAME=$(clear_quotation_marks $(cat $KAGGLE_KEY_FILE | jq .username))
 export KAGGLE_KEY=$(clear_quotation_marks $(cat $KAGGLE_KEY_FILE | jq .key))
+export KAGGLE_DATASET="dpbmanalysis/quantum-circuit-images"
+
+# HF_TOKEN comes from system
+export HF_DATASET="Dpbm/quantum-circuits"
 
 # fix permission for volume
 sudo rm -rf ./data

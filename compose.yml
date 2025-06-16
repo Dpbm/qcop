@@ -38,6 +38,11 @@ services:
       - USER=${AIRFLOW_USERNAME}
       - PASSWORD=${AIRFLOW_PASSWORD}
       - EMAIL=${AIRFLOW_EMAIL}
+      - KAGGLE_USERNAME=${KAGGLE_USERNAME}
+      - KAGGLE_KEY=${KAGGLE_KEY}
+      - KAGGLE_DATASET=${KAGGLE_DATASET}
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_DATASET=${HF_DATASET}
       - PYTHONPATH=/home/airflow/project
       - TARGET_FOLDER=/home/airflow/data
       - TZ=America/Sao_Paulo

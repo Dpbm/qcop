@@ -8,9 +8,7 @@ RUN ${PIPENV} install -r requirements.txt
 
 
 FROM debian:bookworm-slim AS entry
-
 RUN apt update && apt install zip make -y
-
 WORKDIR /
 COPY airflow-entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
@@ -24,7 +22,6 @@ COPY . .
 
 WORKDIR /home/airflow/.local/bin
 COPY --from=entry --chown=airflow:root /usr/bin/zip zip
-COPY --from=entry --chown=airflow:root /usr/bin/make make
 
 WORKDIR /
 COPY --from=entry /entrypoint.sh .

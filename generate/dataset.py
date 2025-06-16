@@ -175,7 +175,7 @@ def generate_images(
                     df.vstack(tmp_df, in_place=True)
 
             progress.update(total_threads)
-    save_df(df, dataset_file_path)
+            save_df(df, dataset_file_path)
 
 
 def remove_duplicated_files(target_folder: FilePath):

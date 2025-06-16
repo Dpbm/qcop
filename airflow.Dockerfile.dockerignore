@@ -4,6 +4,5 @@
 !generate/
 !utils/
 !args/
-!Makefile
 !requirements.txt
 !airflow-entrypoint.sh

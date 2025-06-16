@@ -24,6 +24,8 @@ from utils.constants import (
     DEFAULT_THREADS,
 )
 from generate.ghz import gen_circuit
+from export.kaggle import upload_dataset as upload_dataset_kaggle
+from export.huggingface import upload_dataset as upload_dataset_huggingface
 
 default_args = {
     "depends_on_past": True,
@@ -92,7 +94,7 @@ with DAG(
     with resized and normalized images.
     """
 
-    command = f"zip -r {folder}/dataset-images.zip {folder}/dataset/"
+    command = f"cd {folder} && zip -r dataset-images.zip dataset/"
     pack_img = BashOperator(task_id="pack_images", bash_command=command)
 
     pack_img.doc_md = """
@@ -118,6 +120,24 @@ with DAG(
     Run training after finishing all processes.
     """
 
+    kaggle_dataset = os.environ.get("KAGGLE_DATASET")
+    send_kaggle = PythonOperator(
+        task_id="send_kaggle",
+        python_callable=upload_dataset_kaggle,
+        op_args=[kaggle_dataset,folder]
+    )
+    
+    hf_dataset = os.environ.get("HF_DATASET")
+    send_hf = PythonOperator(
+        task_id="send_huggingface",
+        python_callable=upload_dataset_huggingface,
+        op_args=[hf_dataset,folder]
+    )
+
+    send_hf.doc_md = """
+    Send dataset files to huggingface
+    """
+
     create_folder >> [gen_ghz, gen_df]
     gen_df >> gen_images
     gen_images >> remove_duplicates
@@ -125,3 +145,6 @@ with DAG(
     transform_img >> pack_img
 
     [gen_ghz, pack_img] >> trigger_dag_train
+    [gen_ghz, pack_img] >> send_kaggle
+    [gen_ghz, pack_img] >> send_hf
+
