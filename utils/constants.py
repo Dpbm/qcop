@@ -25,6 +25,8 @@ DEFAULT_TEST_PERCENTAGE = 0.2
 
 DEFAULT_CHECKPOINT = None
 
+MODEL_FILE_PREFIX = "model_"
+
 # ruff: noqa: E731
 dataset_path = lambda target_folder: os.path.join(target_folder, "dataset")
 dataset_file = lambda target_folder: os.path.join(target_folder, "dataset.csv")

@@ -120,18 +120,16 @@ with DAG(
     Run training after finishing all processes.
     """
 
-    kaggle_dataset = os.environ.get("KAGGLE_DATASET")
     send_kaggle = PythonOperator(
         task_id="send_kaggle",
         python_callable=upload_dataset_kaggle,
-        op_args=[kaggle_dataset,folder]
+        op_args=[folder]
     )
     
-    hf_dataset = os.environ.get("HF_DATASET")
     send_hf = PythonOperator(
         task_id="send_huggingface",
         python_callable=upload_dataset_huggingface,
-        op_args=[hf_dataset,folder]
+        op_args=[folder]
     )
 
     send_hf.doc_md = """

@@ -18,6 +18,7 @@ import h5py
 
 from utils.constants import (
     DEBUG,
+    MODEL_FILE_PREFIX,
     dataset_file,
     images_h5_file,
     ghz_file,
@@ -208,7 +209,7 @@ class Model(torch.nn.Module):
 
     def save(self):
         """Save model weights."""
-        path = "model_%s" % (time.ctime())
+        path = "%s%s" % (MODEL_FILE_PREFIX, time.ctime())
         torch.save(self.state_dict(), path)
 
 
