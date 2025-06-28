@@ -27,7 +27,9 @@ export HF_DATASET="Dpbm/quantum-circuits"
 export HF_MODEL_REPO="Dpbm/qcop"
 
 # fix permission for volume
-sudo rm -rf ./data
-sudo mkdir -p ./data
-sudo chown -R 50000:50000 ./data
+TARGET_DATA_FOLDER="./data"
+if [ ! -d "$TARGET_DATA_FOLDER" ]; then
+    sudo mkdir -p ./data
+    sudo chown -R 50000:50000 ./data
+fi
 
