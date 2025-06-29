@@ -27,5 +27,8 @@ pack:
 lock: 
 	conda-lock -f environment.yml
 
+clean-data-folder:
+	sudo rm -rf ./data
+
 airflow-up:
 	source airflow-setup-test.sh && docker compose down && docker compose build && docker compose up -d
