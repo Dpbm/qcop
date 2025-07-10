@@ -40,3 +40,4 @@ history_file = lambda target_folder: os.path.join(target_folder, "history.json")
 output_plot_file = lambda target_folder: os.path.join(
     target_folder, "training_progress.png"
 )
+images_gen_checkpoint_file = lambda target_folder: os.path.join(target_folder, "gen_checkpoint.json")

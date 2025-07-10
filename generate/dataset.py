@@ -1,6 +1,7 @@
 """Generate dataset"""
 
-from typing import Dict, List, TypedDict, Tuple, Any
+from typing import Dict, List, TypedDict, Tuple, Any, Optional
+from enum import Enum
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,7 +23,7 @@ from PIL import Image
 import h5py
 
 from args.parser import parse_args, Arguments
-from utils.constants import dataset_path, dataset_file, images_h5_file
+from utils.constants import dataset_path, dataset_file, images_h5_file, images_gen_checkpoint_file
 from utils.datatypes import FilePath, df_schema, Dimensions
 from utils.image import transform_image
 from utils.colors import Colors
@@ -33,6 +34,85 @@ Schema = Dict[str, Any]
 Dist = Dict[int, float]
 States = List[int]
 Measurements = List[int]
+
+class Stages(Enum):
+    """Enum for dataset generation stages"""
+    GEN_IMAGES="gen"
+    DUPLICATES="duplicates"
+    TRANSFORM="transform"
+
+class Checkpoint:
+    """Class to handle generate data checkpoints"""
+
+    def __init__(self, path:Optional[FilePath]):
+        self._path = path
+
+        self._stage = Stages.GEN_IMAGES
+        self._index = 0
+        self._files : List[FilePath] = []
+
+
+        # Check file and get the data
+
+        if self._path is None:
+            print("%sNo Checkpoint was provided!%s" % (Colors.YELLOWFG, Colors.ENDC))
+            return
+
+        if not os.path.exists(self._path):
+            print("%sCheckpoint file %s doesn't exists!%s"%(Colors.YELLOWFG, self._path, Colors.ENDC))
+            return
+        
+        print(
+            "%sLoading checkpoint from: %s...%s"
+            % (Colors.MAGENTABG, self._path, Colors.ENDC)
+        )
+
+        with open(self._path, "r") as file:
+            data = json.load(file)
+            stage = data.get("stage")
+            self._stage = Stages.GEN_IMAGES if stage is None else Stages(stage)
+            self._index = data.get("index") or 0
+            self._files = data.get("files") or []
+
+    @property
+    def stage(self) -> Stages:
+        """get checkpoint generation stage"""
+        return self._stage
+    
+    @stage.setter
+    def stage(self, value:Stages):
+        """Update stage"""
+        self._stage = value
+    
+    @property
+    def index(self) -> int:
+        """get checkpoint generation index"""
+        return self._index
+
+    @index.setter
+    def index(self, value:int):
+        """update index"""
+        self._index = value
+
+    @property
+    def files(self) -> List[FilePath]:
+        """get duplicated files to remove"""
+        return self._files
+
+    @files.setter # type: ignore
+    def files(self, value:List[FilePath]):
+        """set files to delete"""
+        self._files = value
+
+    def save(self):
+        print("%sSaving checkpoint at: %s%s" % (Colors.GREENBG, self._path, Colors.ENDC))
+        with open(self._path, "w") as file:
+            data = {
+                "stage":self._stage.value,
+                "index":self._index,
+                "files":self._files
+            }
+            json.dump(file, data)
 
 class CircuitResult(TypedDict):
     """Type for circuit results"""
@@ -132,6 +212,7 @@ def generate_images(
     shots: int,
     dataset_size: int,
     total_threads: int,
+    checkpoint: Checkpoint
 ):
     """
     Generate multiple images and saves a dataframe with information about them.
@@ -147,7 +228,7 @@ def generate_images(
     base_dataset_path = dataset_path(target_folder)
 
     with tqdm(total=dataset_size) as progress:
-        index = 0
+        index = checkpoint.index
         while index < dataset_size:
             args = []
 
@@ -177,43 +258,54 @@ def generate_images(
 
                 save_df(df, dataset_file_path)
 
-                # remove df from memory to open avoid excess
+                # remove df from memory to open avoid excessive
                 # of memory usage
                 del df
                 gc.collect()
 
             progress.update(total_threads)
 
+            checkpoint.index = index
+            checkpoint.save()
 
-def remove_duplicated_files(target_folder: FilePath):
+
+def remove_duplicated_files(target_folder: FilePath, checkpoint:Checkpoint):
     """Remove images that are duplicated based on its hash"""
+    print("%sRemoving duplicated images%s" % (Colors.GREENBG, Colors.ENDC))
 
-    dataset_file_path = dataset_file(target_folder)
+    if(not checkpoint.files): # empty list
+        dataset_file_path = dataset_file(target_folder)
 
-    df = open_csv(dataset_file_path)
-    clean_df = df.unique(maintain_order=True, subset=["hash"])
-    clean_df_indexes = clean_df.get_column("index")
+        df = open_csv(dataset_file_path)
+        clean_df = df.unique(maintain_order=True, subset=["hash"])
+        save_df(clean_df, dataset_file_path)
 
-    duplicated_values = df.filter(~pl.col("index").is_in(clean_df_indexes))
+        clean_df_indexes = clean_df.get_column("index")
+        duplicated_files = df.filter(~pl.col("index").is_in(clean_df_indexes))["file"]
+
+        checkpoint.files = duplicated_files.to_list()
+        checkpoint.save()
 
     print("%sDeleting duplicated files%s" % (Colors.GREENBG, Colors.ENDC))
-    for row in tqdm(duplicated_values.iter_rows(named=True)):
-        file = row["file"]
+    for file in tqdm(checkpoint.files):
         os.remove(file)
 
-    save_df(clean_df, dataset_file_path)
+        checkpoint.files.remove(file)
+        checkpoint.save()
 
 
-def transform_images(target_folder: FilePath, new_dim: Dimensions):
+
+def transform_images(target_folder: FilePath, new_dim: Dimensions, checkpoint:Checkpoint):
     """Normalize images and save them into a h5 file"""
     print("%sTransforming images%s" % (Colors.GREENBG, Colors.ENDC))
 
     df = open_csv(dataset_file(target_folder))
+    df.slice(offset=checkpoint.index)
 
     max_width, max_height = new_dim
 
-    image_i = 0
-    with h5py.File(images_h5_file(target_folder), "w") as file:
+    image_i = checkpoint.index
+    with h5py.File(images_h5_file(target_folder), "a") as file:
         for row in tqdm(df.iter_rows(named=True)):
             image_path = row["file"]
 
@@ -222,6 +314,8 @@ def transform_images(target_folder: FilePath, new_dim: Dimensions):
                 file.create_dataset(f"{image_i}", data=tensor)
 
             image_i += 1
+            checkpoint.index = image_i
+            checkpoint.save()
 
 
 def crate_dataset_folder(base_folder: FilePath):
@@ -268,18 +362,28 @@ def main(args: Arguments):
 
     start_df(args.target_folder)
 
-    generate_images(
-        args.target_folder,
-        args.n_qubits,
-        args.max_gates,
-        args.shots,
-        args.dataset_size,
-        args.threads,
-    )
+    checkpoint = Checkpoint(images_gen_checkpoint_file(args.target_folder))
 
-    remove_duplicated_files(args.target_folder)
+    if(checkpoint.stage == Stages.GEN_IMAGES):
+        generate_images(
+            args.target_folder,
+            args.n_qubits,
+            args.max_gates,
+            args.shots,
+            args.dataset_size,
+            args.threads,
+            checkpoint
+        )
 
-    transform_images(args.target_folder, args.new_image_dim)
+        checkpoint.stage = Stages.DUPLICATES
+        checkpoint.index = 0
+
+    if(checkpoint.stage == Stages.DUPLICATES):
+        remove_duplicated_files(args.target_folder, checkpoint)
+        checkpoint.stage = Stages.TRANSFORM
+        checkpoint.index = 0
+
+    transform_images(args.target_folder, args.new_image_dim, checkpoint)
 
 
 if __name__ == "__main__":
