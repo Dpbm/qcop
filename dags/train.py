@@ -8,6 +8,7 @@ from airflow.providers.standard.operators.python import PythonOperator
 from train import setup_and_run_training
 from args.parser import Arguments
 from utils.constants import DEFAULT_TARGET_FOLDER
+from utils.helpers import get_latest_model_checkpoint
 from export.kaggle import upload_model as upload_model_kaggle
 from export.huggingface import upload_model as upload_model_hf
 
@@ -16,6 +17,10 @@ with DAG(dag_id="train_model", description="train vision model") as dag:
     folder = os.environ.get("TARGET_FOLDER") or DEFAULT_TARGET_FOLDER
     args = Arguments()
     args.target_folder = folder
+
+    checkpoint = get_latest_model_checkpoint(folder)
+    if(checkpoint):
+        args.checkpoint = checkpoint
 
     train = PythonOperator(
         task_id="train_model", 

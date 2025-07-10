@@ -4,7 +4,7 @@ import os
 
 from airflow import DAG
 from airflow.providers.standard.operators.bash import BashOperator
-from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.python import PythonOperator, BranchPythonOperator
 from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 from generate.dataset import (
@@ -13,6 +13,8 @@ from generate.dataset import (
     remove_duplicated_files,
     transform_images,
     start_df,
+    Checkpoint,
+    Stages
 )
 from utils.constants import (
     DEFAULT_NUM_QUBITS,
@@ -22,6 +24,7 @@ from utils.constants import (
     DEFAULT_SHOTS,
     DEFAULT_DATASET_SIZE,
     DEFAULT_THREADS,
+    images_gen_checkpoint_file
 )
 from generate.ghz import gen_circuit
 from export.kaggle import upload_dataset as upload_dataset_kaggle
@@ -30,6 +33,34 @@ from export.huggingface import upload_dataset as upload_dataset_huggingface
 default_args = {
     "depends_on_past": True,
 }
+
+GEN_IMAGES_TASK_ID = 'gen_images'
+REMOVE_DUPLICATES_TASK_ID = 'remove_duplicates'
+TRANSFORM_TASK_ID = 'transform_images'
+
+def next_step(checkpoint:Checkpoint) -> str:
+    """
+    checks teh current checkpoint and returns the next
+    task_id.
+    """
+
+    if (checkpoint.stage == Stages.GEN_IMAGES):
+        return GEN_IMAGES_TASK_ID
+    
+    if(checkpoint.stage == Stages.DUPLICATES):
+        return REMOVE_DUPLICATES_TASK_ID
+
+    return TRANSFORM_TASK_ID
+
+def update_checkpoint(checkpoint:Checkpoint, stage:Stages):
+    """
+    Updates the checkpoint to start next task.
+    """
+    checkpoint.index = 0
+    checkpoint.files = []
+    checkpoint.stage = Stages.TRANSFORM
+    checkpoint.save()
+
 
 with DAG(
     dag_id="build_dataset",
@@ -47,6 +78,17 @@ with DAG(
     create_folder.doc_md = """
     Create a folder (if it doesn't exist) to store images.
     """
+    
+    checkpoint = Checkpoint(images_gen_checkpoint_file(folder))
+
+    branch_checkpoint = BranchPythonOperator(
+        task_id="check_checkpoint",
+        python_callable=next_step,
+        op_args=[checkpoint]
+    )
+    branch_checkpoint.doc_md = """
+    Choose the next task based on the current checkpoint.
+    """
 
     gen_df = PythonOperator(
         task_id="gen_df", python_callable=start_df, op_args=[folder]
@@ -56,7 +98,7 @@ with DAG(
     """
 
     gen_images = PythonOperator(
-        task_id="gen_images",
+        task_id=GEN_IMAGES_TASK_ID,
         python_callable=generate_images,
         op_args=[
             folder,
@@ -65,6 +107,7 @@ with DAG(
             DEFAULT_SHOTS,
             DEFAULT_DATASET_SIZE,
             DEFAULT_THREADS,
+            checkpoint
         ],
     )
 
@@ -73,20 +116,40 @@ with DAG(
     Qiskit framework.
     """
 
+    transtion_gen_to_remove = PythonOperator(
+        task_id="gen_to_remove",
+        python_callable=update_checkpoint,
+        op_args=[checkpoint, Stages.DUPLICATES]
+    )
+
+    transtion_gen_to_remove.doc_md = """
+    Update checkpoint to start removing duplicated files.
+    """
+
     remove_duplicates = PythonOperator(
-        task_id="remove_duplicates",
+        task_id=REMOVE_DUPLICATES_TASK_ID,
         python_callable=remove_duplicated_files,
-        op_args=[folder],
+        op_args=[folder, checkpoint],
     )
 
     remove_duplicates.doc_md = """
     Remove files that have the same hashes.
     """
 
+    transition_remove_to_transform = PythonOperator(
+        task_id="remove_to_transform",
+        python_callable=update_checkpoint,
+        op_args=[checkpoint, Stages.TRANSFORM]
+    )
+    
+    transition_remove_to_transform.doc_md = """
+    Update checkpoint to start transforming images.
+    """
+
     transform_img = PythonOperator(
-        task_id="transform_images",
+        task_id=TRANSFORM_TASK_ID,
         python_callable=transform_images,
-        op_args=[folder, DEFAULT_NEW_DIM],
+        op_args=[folder, DEFAULT_NEW_DIM, checkpoint],
     )
 
     transform_img.doc_md = """
@@ -137,9 +200,16 @@ with DAG(
     """
 
     create_folder >> [gen_ghz, gen_df]
-    gen_df >> gen_images
-    gen_images >> remove_duplicates
-    remove_duplicates >> transform_img
+    gen_df >> branch_checkpoint
+
+    branch_checkpoint >> gen_images
+    branch_checkpoint >> remove_duplicates
+    branch_checkpoint >> transform_img
+
+    gen_images >> transtion_gen_to_remove
+    transtion_gen_to_remove >> remove_duplicates
+    remove_duplicates >> transition_remove_to_transform
+    transition_remove_to_transform >> transform_img
     transform_img >> pack_img
 
     [gen_ghz, pack_img] >> trigger_dag_train
