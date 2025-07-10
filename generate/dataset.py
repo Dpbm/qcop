@@ -8,6 +8,7 @@ import hashlib
 import json
 from itertools import product
 import random
+import gc
 
 from qiskit import QuantumCircuit, ClassicalRegister
 from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
@@ -32,7 +33,6 @@ Schema = Dict[str, Any]
 Dist = Dict[int, float]
 States = List[int]
 Measurements = List[int]
-
 
 class CircuitResult(TypedDict):
     """Type for circuit results"""
@@ -139,7 +139,6 @@ def generate_images(
     """
 
     dataset_file_path = dataset_file(target_folder)
-    df = open_csv(dataset_file_path)
 
     bitstrings_to_int = [
         int("".join(comb), 2) for comb in product("01", repeat=n_qubits)
@@ -170,12 +169,20 @@ def generate_images(
 
             with ThreadPoolExecutor(max_workers=total_threads) as pool:
                 threads = [pool.submit(generate_image, *arg) for arg in args]  # type:ignore
+                df = open_csv(dataset_file_path)
+
                 for future in as_completed(threads):  # type: ignore
                     tmp_df = create_df(future.result())
                     df.vstack(tmp_df, in_place=True)
 
+                save_df(df, dataset_file_path)
+
+                # remove df from memory to open avoid excess
+                # of memory usage
+                del df
+                gc.collect()
+
             progress.update(total_threads)
-            save_df(df, dataset_file_path)
 
 
 def remove_duplicated_files(target_folder: FilePath):
