@@ -156,6 +156,16 @@ with DAG(
     Get those image files and then, map them into an h5 file
     with resized and normalized images.
     """
+    
+    reset_checkpoint = PythonOperator(
+        task_id="reset_checkpoint",
+        python_callable=update_checkpoint,
+        op_args=[checkpoint, Stages.GEN_IMAGES]
+    )
+    
+    reset_checkpoint.doc_md = """
+    Reset checkpoint to start again.
+    """
 
     command = f"cd {folder} && zip -r dataset-images.zip dataset/"
     pack_img = BashOperator(task_id="pack_images", bash_command=command)
@@ -210,7 +220,8 @@ with DAG(
     transtion_gen_to_remove >> remove_duplicates
     remove_duplicates >> transition_remove_to_transform
     transition_remove_to_transform >> transform_img
-    transform_img >> pack_img
+    transform_img >> reset_checkpoint
+    reset_checkpoint >> pack_img
 
     [gen_ghz, pack_img] >> trigger_dag_train
     [gen_ghz, pack_img] >> send_kaggle
