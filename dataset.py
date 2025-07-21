@@ -10,6 +10,7 @@ import json
 from itertools import product
 import random
 import gc
+import csv
 
 from qiskit import QuantumCircuit, ClassicalRegister
 from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
@@ -17,6 +18,8 @@ from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
 from qiskit_aer import AerSimulator
 from qiskit_aer.primitives import Sampler
 
+import matplotlib.pyplot as plt
+import matplotlib
 from tqdm import tqdm
 import polars as pl
 from PIL import Image
@@ -105,6 +108,7 @@ class Checkpoint:
         self._files = value
 
     def save(self):
+        """Saves checkpoint to a json file"""
         print("%sSaving checkpoint at: %s%s" % (Colors.GREENBG, self._path, Colors.ENDC))
         with open(self._path, "w") as file:
             data = {
@@ -112,28 +116,33 @@ class Checkpoint:
                 "index":self._index,
                 "files":self._files
             }
-            json.dump(file, data)
+            json.dump(data,file)
+
+    def __str__(self) -> str:
+        return "Checkpoint: %s; stage: %s; index: %d; total_files: %d"%(self._path, self._stage.value, self._index, len(self._files))
 
 class CircuitResult(TypedDict):
     """Type for circuit results"""
 
-    index: pl.Series  # int
-    depth: pl.Series  # int
-    file: pl.Series  # string
-    measurements: pl.Series  # JSON string
-    result: pl.Series  # JSON string
-    hash: pl.Series  # string
-
+    index: int
+    depth: int
+    file: str 
+    measurements: str  # JSON string
+    result: str  # JSON string
+    hash: str 
 
 def generate_circuit(
     circuit_image_path: FilePath, pm: StagedPassManager, n_qubits: int, total_gates: int
 ) -> Tuple[QuantumCircuit, int, Measurements]:
     """Generate circuit and return the isa version of the circuit, its depth and the qubits that were measured"""
 
+    # non-interactive backend
+    matplotlib.use('Agg')
+
     qc = get_random_circuit(n_qubits, total_gates)
 
     type_of_meas = random.randint(0, 1)
-    measurements = list(range(n_qubits))
+    measurements = []
 
     if type_of_meas == 0:
         measurements = get_measurements(n_qubits)
@@ -145,23 +154,27 @@ def generate_circuit(
     else:
         qc.measure_all()
 
-    qc.draw("mpl", filename=circuit_image_path)
+    drawing = qc.draw("mpl", filename=circuit_image_path)
+    plt.close(drawing)
 
     depth = qc.depth()
-
     isa_qc = pm.run(qc)
+
+    # release quantum circuit
+    del qc
+    del drawing
+    gc.collect()
+
     return isa_qc, depth, measurements
 
 
 def get_circuit_results(qc: QuantumCircuit, sampler: Sampler, shots: int) -> Dist:
     """Execute cirucit on sampler. Returns its quasi dist"""
-
     return sampler.run([qc], shots=shots).result().quasi_dists[0]  # type: ignore
 
 
 def fix_dist_gaps(dist: Dist, states: States):
     """Auxiliary function to fill the remaining bitstrings with 0"""
-
     for state in states:
         result_value = dist.get(state)
         if result_value is None:
@@ -191,17 +204,20 @@ def generate_image(
     result = get_circuit_results(isa_qc, sampler, shots)
     fix_dist_gaps(result, states)
 
+    # clear data
+    del sim
+    del pm
+    del sampler
+    del isa_qc
+    gc.collect()
+
     return {
-        "index": pl.Series("index", [index], dtype=pl.UInt16),
-        "depth": pl.Series("depth", [depth], dtype=pl.UInt8),
-        "file": pl.Series("file", [image_path], dtype=pl.String),
-        "result": pl.Series(
-            "result", [json.dumps(list(result.values()))], dtype=pl.String
-        ),
-        "hash": pl.Series("hash", [file_hash], dtype=pl.String),
-        "measurements": pl.Series(
-            "measurements", [json.dumps(measurements)], dtype=pl.String
-        ),
+        "index": index,
+        "depth": depth,
+        "file": image_path,
+        "result":json.dumps(list(result.values())),
+        "hash": file_hash,
+        "measurements": json.dumps(measurements)
     }
 
 
@@ -227,8 +243,8 @@ def generate_images(
 
     base_dataset_path = dataset_path(target_folder)
 
-    with tqdm(total=dataset_size) as progress:
-        index = checkpoint.index
+    index = checkpoint.index
+    with tqdm(total=dataset_size, initial=index) as progress:
         while index < dataset_size:
             args = []
 
@@ -250,18 +266,36 @@ def generate_images(
 
             with ThreadPoolExecutor(max_workers=total_threads) as pool:
                 threads = [pool.submit(generate_image, *arg) for arg in args]  # type:ignore
-                df = open_csv(dataset_file_path)
 
+                # The best would be using the polars scan_csv and sink_csv to 
+                # write memory efficient queries easily.
+                # However, it's an experimental feature, and for some reason they don't work
+                # well together.
+                # https://github.com/pola-rs/polars/issues/22845
+                # https://github.com/pola-rs/polars/issues/20468
+                # to solve that, we gonna use the built-in python's csv library
+                # to append the new lines without loading the whole csv into memory.
+
+                #df = open_csv(dataset_file_path)
+
+                rows = []
                 for future in as_completed(threads):  # type: ignore
-                    tmp_df = create_df(future.result())
-                    df.vstack(tmp_df, in_place=True)
+                    values = list(future.result().values())
+                    rows.append(values)
 
-                save_df(df, dataset_file_path)
+                append_rows_to_df(dataset_file_path, rows)
+
+                del rows
+                del threads
+                del args
+                gc.collect()
+
+                #save_df(df, dataset_file_path)
 
                 # remove df from memory to open avoid excessive
                 # of memory usage
-                del df
-                gc.collect()
+                #del df
+                #gc.collect()
 
             progress.update(total_threads)
 
@@ -277,13 +311,29 @@ def remove_duplicated_files(target_folder: FilePath, checkpoint:Checkpoint):
         dataset_file_path = dataset_file(target_folder)
 
         df = open_csv(dataset_file_path)
-        clean_df = df.unique(maintain_order=True, subset=["hash"])
+
+        # once if we stop at some point the dataset generation,
+        # when we resume it, there's some chance of have another row with the same
+        # file index. The file is overwritten, but another line will be added and
+        # it can raise inconsistency. So before checking distinct hashes, we check
+        # for distinct file paths and set is at the default.
+        df = df.filter(pl.col('file').is_first_distinct())
+
+        clean_df = df.filter(pl.col('hash').is_first_distinct())
+        # even though using the combination scan_csv + sink_csv is not a good idea, using
+        # it interchanged with a filter
         save_df(clean_df, dataset_file_path)
 
-        clean_df_indexes = clean_df.get_column("index")
-        duplicated_files = df.filter(~pl.col("index").is_in(clean_df_indexes))["file"]
+        duplicated_files = df.join(clean_df, on=df.columns, how="anti").collect().get_column('file')
 
         checkpoint.files = duplicated_files.to_list()
+
+        # to avoid useless memory usage
+        del duplicated_files
+        del clean_df
+        del df
+        gc.collect()
+
         checkpoint.save()
 
     print("%sDeleting duplicated files%s" % (Colors.GREENBG, Colors.ENDC))
@@ -300,14 +350,25 @@ def transform_images(target_folder: FilePath, new_dim: Dimensions, checkpoint:Ch
     print("%sTransforming images%s" % (Colors.GREENBG, Colors.ENDC))
 
     df = open_csv(dataset_file(target_folder))
-    df.slice(offset=checkpoint.index)
+
+    current_index = checkpoint.index
+    amount_of_rows_per_iteration = 500
+
+    images : List[FilePath] = []
+    while True:
+        collected_rows = df.slice(offset=current_index, length=amount_of_rows_per_iteration).collect().get_column('file').to_list()
+
+        if(len(collected_rows) <= 0):
+            break
+
+        images = [*images, *collected_rows]
+        current_index += amount_of_rows_per_iteration
 
     max_width, max_height = new_dim
 
     image_i = checkpoint.index
     with h5py.File(images_h5_file(target_folder), "a") as file:
-        for row in tqdm(df.iter_rows(named=True)):
-            image_path = row["file"]
+        for image_path in tqdm(images):
 
             with Image.open(image_path) as img:
                 tensor = transform_image(img, max_width, max_height)
@@ -323,36 +384,50 @@ def crate_dataset_folder(base_folder: FilePath):
     os.makedirs(dataset_path(base_folder), exist_ok=True)
 
 
-default_df_data: CircuitResult = {
-    "index": pl.Series(),
-    "depth": pl.Series(),
-    "file": pl.Series(),
-    "measurements": pl.Series(),
-    "result": pl.Series(),
-    "hash": pl.Series(),
-}
+def create_df() -> pl.LazyFrame:
+    """returns a Polars LazyFrame based on schema"""
+    return pl.LazyFrame(schema=df_schema)
 
 
-def create_df(data: CircuitResult = default_df_data) -> pl.DataFrame:
-    """returns a Polars DataFrame schema"""
-    return pl.DataFrame(data, schema=df_schema)
-
-
-def open_csv(path: FilePath) -> pl.DataFrame:
-    """opens the CSV file and import it as a DataFrame"""
-    csv = pl.read_csv(path)
+def open_csv(path: FilePath) -> pl.LazyFrame:
+    """opens the CSV file and import it as a LazyFrame"""
+    csv = pl.scan_csv(path)
     return csv.cast(df_schema)
 
 
-def save_df(df: pl.DataFrame, file_path: FilePath):
-    """Save dataset as csv"""
-    df.write_csv(file_path)
+def save_df(df: pl.LazyFrame, file_path: FilePath):
+    """
+    Save dataset as csv.
+
+    Even though it's not a good idea to open a csv file using
+    scan_csv and then save using sink_csv, it works for some cases
+    and I'll let it here for now.
+    """
+    df.sink_csv(file_path)
+
+def append_rows_to_df(file_path:FilePath, rows:List[List[Any]]):
+    """
+    Use pythons built-in csv library to append rows into a file
+    without loading it into memory directly.
+    """
+
+    with open(file_path, 'a') as file:
+        writer = csv.writer(file)
+        writer.writerows(rows)
 
 
 def start_df(base_file_path: FilePath):
-    """generates an empty df and saves it on a csv file"""
+    """
+    generates an empty df and saves it on a csv file.
+
+    It's not a good idea to use the scan_csv+sink_csv, but for
+    an empty lazyFrame it works well.
+    """
     df = create_df()
     save_df(df, dataset_file(base_file_path))
+
+    del df
+    gc.collect()
 
 
 def main(args: Arguments):

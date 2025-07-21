@@ -35,6 +35,7 @@ services:
               count: all
               driver: nvidia 
     environment:
+      #- DEBUG=False
       - USER=${AIRFLOW_USERNAME}
       - PASSWORD=${AIRFLOW_PASSWORD}
       - EMAIL=${AIRFLOW_EMAIL}
@@ -53,5 +54,8 @@ services:
       - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=False
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - AIRFLOW_CONN_METADATA_DB=postgres+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      #- AIRFLOW__SCHEDULER__TASK_INSTANCE_HEARTBEAT_SEC=1000000000
+      #- AIRFLOW__SCHEDULER__TASK_INSTANCE_HEARTBEAT_TIMEOUT=100
+      #- AIRFLOW__SCHEDULER__TASK_INSTANCE_HEARTBEAT_TIMEOUT_DETECTION_INTERVAL=100
     restart: always
 

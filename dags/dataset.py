@@ -7,7 +7,7 @@ from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator, BranchPythonOperator
 from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
-from generate.dataset import (
+from dataset import (
     generate_images,
     crate_dataset_folder,
     remove_duplicated_files,
@@ -26,7 +26,7 @@ from utils.constants import (
     DEFAULT_THREADS,
     images_gen_checkpoint_file
 )
-from generate.ghz import gen_circuit
+from ghz import gen_circuit
 from export.kaggle import upload_dataset as upload_dataset_kaggle
 from export.huggingface import upload_dataset as upload_dataset_huggingface
 
@@ -44,6 +44,8 @@ def next_step(checkpoint:Checkpoint) -> str:
     task_id.
     """
 
+    print(checkpoint)
+
     if (checkpoint.stage == Stages.GEN_IMAGES):
         return GEN_IMAGES_TASK_ID
     
@@ -56,9 +58,16 @@ def update_checkpoint(checkpoint:Checkpoint, stage:Stages):
     """
     Updates the checkpoint to start next task.
     """
+
+    print(checkpoint)
+
     checkpoint.index = 0
     checkpoint.files = []
-    checkpoint.stage = Stages.TRANSFORM
+    checkpoint.stage = stage
+
+    print("new")
+    print(checkpoint)
+
     checkpoint.save()
 
 

@@ -1,5 +1,7 @@
 *
 !train.py
+!dataset.py
+!ghz.py
 !export/
 !generate/
 !utils/
