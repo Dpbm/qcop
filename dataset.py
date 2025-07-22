@@ -142,7 +142,7 @@ def generate_circuit(
     qc = get_random_circuit(n_qubits, total_gates)
 
     type_of_meas = random.randint(0, 1)
-    measurements = []
+    measurements = list(range(n_qubits))
 
     if type_of_meas == 0:
         measurements = get_measurements(n_qubits)

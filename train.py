@@ -381,18 +381,17 @@ def one_epoch(
     return last_loss
 
 
-def get_model(device: Device, state: Optional[StateDict] = None) -> torch.jit.ScriptModule:
+def get_model(device: Device, state: Optional[StateDict] = None) -> Model:
     """
-    Prepare script model (JIT).
+    Prepare model.
     It creates a model, load into a given device and load weights if a state
     was provided.
     """
-    model = Model().to(device)
+    model : Model = Model().to(device)
     if state:
         model.load_state_dict(state)
 
-    script_model = torch.jit.script(model)
-    return script_model
+    return model
 
 
 def train(
