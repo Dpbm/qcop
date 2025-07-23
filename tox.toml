@@ -1,5 +1,5 @@
 requires = ["tox>=4"]
-env_list = ["format_code", "lint_check", "type_check", "py3.12"]
+env_list = ["format_code", "lint_check", "type_check", "tests", "py3.12"]
 
 [env.format_code]
 description = "Ruff - format code"
@@ -19,3 +19,8 @@ skip_install = false
 deps = ["mypy", "types-tqdm"]
 commands = [[ "mypy", { replace = "posargs", default = ["."], extend = true} ]]
 
+[env.tests]
+description = "run pytest"
+skip_install = false
+deps = ["pytest", "polars"]
+commands = [[ "python", "-m", "pytest" ]]

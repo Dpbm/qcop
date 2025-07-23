@@ -58,17 +58,17 @@ class Arguments:
     @property
     def epochs(self) -> int:
         """Get epochs data"""
-        return self._epochs # type: ignore
+        return self._epochs  # type: ignore
 
     @epochs.setter
     def epochs(self, value: int):
         """Set epochs data"""
-        self._epochs = value 
+        self._epochs = value
 
     @property
     def batch_size(self) -> int:
         """Get batch_size data"""
-        return self._batch_size # type: ignore
+        return self._batch_size  # type: ignore
 
     @batch_size.setter
     def batch_size(self, value: int):
@@ -78,7 +78,7 @@ class Arguments:
     @property
     def train_size(self) -> int:
         """Get train_size data"""
-        return self._train_size # type: ignore
+        return self._train_size  # type: ignore
 
     @train_size.setter
     def train_size(self, value: int):
@@ -87,8 +87,8 @@ class Arguments:
 
     @property
     def test_size(self) -> int:
-        """Get test_size data""" 
-        return self._test_size # type: ignore
+        """Get test_size data"""
+        return self._test_size  # type: ignore
 
     @test_size.setter
     def test_size(self, value: int):
@@ -98,7 +98,7 @@ class Arguments:
     @property
     def threads(self) -> int:
         """Get threads data"""
-        return self._threads # type: ignore
+        return self._threads  # type: ignore
 
     @threads.setter
     def threads(self, value: int):
@@ -108,7 +108,7 @@ class Arguments:
     @property
     def shots(self) -> int:
         """Get shots data"""
-        return self._shots # type: ignore
+        return self._shots  # type: ignore
 
     @shots.setter
     def shots(self, value: int):
@@ -118,7 +118,7 @@ class Arguments:
     @property
     def n_qubits(self) -> int:
         """Get n_qubits data"""
-        return self._n_qubits # type: ignore
+        return self._n_qubits  # type: ignore
 
     @n_qubits.setter
     def n_qubits(self, value: int):
@@ -128,7 +128,7 @@ class Arguments:
     @property
     def max_gates(self) -> int:
         """Get max_gates data"""
-        return self._max_gates # type: ignore
+        return self._max_gates  # type: ignore
 
     @max_gates.setter
     def max_gates(self, value: int):
@@ -138,7 +138,7 @@ class Arguments:
     @property
     def dataset_size(self) -> int:
         """Get dataset_size data"""
-        return self._dataset_size # type: ignore
+        return self._dataset_size  # type: ignore
 
     @dataset_size.setter
     def dataset_size(self, value: int):
@@ -148,7 +148,7 @@ class Arguments:
     @property
     def target_folder(self) -> FilePath:
         """Get target_folder data"""
-        return self._target_folder # type: ignore
+        return self._target_folder  # type: ignore
 
     @target_folder.setter
     def target_folder(self, value: FilePath):
@@ -158,7 +158,7 @@ class Arguments:
     @property
     def checkpoint(self) -> Optional[FilePath]:
         """Get checkpoint data"""
-        return self._checkpoint # type: ignore
+        return self._checkpoint  # type: ignore
 
     @checkpoint.setter
     def checkpoint(self, value: Optional[FilePath]):
@@ -168,7 +168,7 @@ class Arguments:
     @property
     def new_image_dim(self) -> Dimensions:
         """Get new_image_dim data"""
-        return self._new_image_dim # type: ignore
+        return self._new_image_dim  # type: ignore
 
     @new_image_dim.setter
     def new_image_dim(self, value: Dimensions):

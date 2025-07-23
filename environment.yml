@@ -20,10 +20,14 @@ dependencies:
       - polars
       - apache-airflow==2.11.0
       - apache-airflow-providers-standard
+      - psycopg2-binary
+      - kagglehub
+      - huggingface_hub
       - pandas
       - ruff
       - tox
       - mypy
       - types-tqdm
+      - pytest
 platforms:
   - linux-64

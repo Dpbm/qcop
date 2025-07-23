@@ -4,7 +4,10 @@ import os
 
 from airflow import DAG
 from airflow.providers.standard.operators.bash import BashOperator
-from airflow.providers.standard.operators.python import PythonOperator, BranchPythonOperator
+from airflow.providers.standard.operators.python import (
+    PythonOperator,
+    BranchPythonOperator,
+)
 from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 from dataset import (
@@ -14,7 +17,7 @@ from dataset import (
     transform_images,
     start_df,
     Checkpoint,
-    Stages
+    Stages,
 )
 from utils.constants import (
     DEFAULT_NUM_QUBITS,
@@ -24,7 +27,7 @@ from utils.constants import (
     DEFAULT_SHOTS,
     DEFAULT_DATASET_SIZE,
     DEFAULT_THREADS,
-    images_gen_checkpoint_file
+    images_gen_checkpoint_file,
 )
 from ghz import gen_circuit
 from export.kaggle import upload_dataset as upload_dataset_kaggle
@@ -34,11 +37,12 @@ default_args = {
     "depends_on_past": True,
 }
 
-GEN_IMAGES_TASK_ID = 'gen_images'
-REMOVE_DUPLICATES_TASK_ID = 'remove_duplicates'
-TRANSFORM_TASK_ID = 'transform_images'
+GEN_IMAGES_TASK_ID = "gen_images"
+REMOVE_DUPLICATES_TASK_ID = "remove_duplicates"
+TRANSFORM_TASK_ID = "transform_images"
 
-def next_step(checkpoint:Checkpoint) -> str:
+
+def next_step(checkpoint: Checkpoint) -> str:
     """
     checks teh current checkpoint and returns the next
     task_id.
@@ -46,15 +50,16 @@ def next_step(checkpoint:Checkpoint) -> str:
 
     print(checkpoint)
 
-    if (checkpoint.stage == Stages.GEN_IMAGES):
+    if checkpoint.stage == Stages.GEN_IMAGES:
         return GEN_IMAGES_TASK_ID
-    
-    if(checkpoint.stage == Stages.DUPLICATES):
+
+    if checkpoint.stage == Stages.DUPLICATES:
         return REMOVE_DUPLICATES_TASK_ID
 
     return TRANSFORM_TASK_ID
 
-def update_checkpoint(checkpoint:Checkpoint, stage:Stages):
+
+def update_checkpoint(checkpoint: Checkpoint, stage: Stages):
     """
     Updates the checkpoint to start next task.
     """
@@ -87,13 +92,11 @@ with DAG(
     create_folder.doc_md = """
     Create a folder (if it doesn't exist) to store images.
     """
-    
+
     checkpoint = Checkpoint(images_gen_checkpoint_file(folder))
 
     branch_checkpoint = BranchPythonOperator(
-        task_id="check_checkpoint",
-        python_callable=next_step,
-        op_args=[checkpoint]
+        task_id="check_checkpoint", python_callable=next_step, op_args=[checkpoint]
     )
     branch_checkpoint.doc_md = """
     Choose the next task based on the current checkpoint.
@@ -116,7 +119,7 @@ with DAG(
             DEFAULT_SHOTS,
             DEFAULT_DATASET_SIZE,
             DEFAULT_THREADS,
-            checkpoint
+            checkpoint,
         ],
     )
 
@@ -128,7 +131,7 @@ with DAG(
     transtion_gen_to_remove = PythonOperator(
         task_id="gen_to_remove",
         python_callable=update_checkpoint,
-        op_args=[checkpoint, Stages.DUPLICATES]
+        op_args=[checkpoint, Stages.DUPLICATES],
     )
 
     transtion_gen_to_remove.doc_md = """
@@ -148,9 +151,9 @@ with DAG(
     transition_remove_to_transform = PythonOperator(
         task_id="remove_to_transform",
         python_callable=update_checkpoint,
-        op_args=[checkpoint, Stages.TRANSFORM]
+        op_args=[checkpoint, Stages.TRANSFORM],
     )
-    
+
     transition_remove_to_transform.doc_md = """
     Update checkpoint to start transforming images.
     """
@@ -165,13 +168,13 @@ with DAG(
     Get those image files and then, map them into an h5 file
     with resized and normalized images.
     """
-    
+
     reset_checkpoint = PythonOperator(
         task_id="reset_checkpoint",
         python_callable=update_checkpoint,
-        op_args=[checkpoint, Stages.GEN_IMAGES]
+        op_args=[checkpoint, Stages.GEN_IMAGES],
     )
-    
+
     reset_checkpoint.doc_md = """
     Reset checkpoint to start again.
     """
@@ -203,15 +206,13 @@ with DAG(
     """
 
     send_kaggle = PythonOperator(
-        task_id="send_kaggle",
-        python_callable=upload_dataset_kaggle,
-        op_args=[folder]
+        task_id="send_kaggle", python_callable=upload_dataset_kaggle, op_args=[folder]
     )
-    
+
     send_hf = PythonOperator(
         task_id="send_huggingface",
         python_callable=upload_dataset_huggingface,
-        op_args=[folder]
+        op_args=[folder],
     )
 
     send_hf.doc_md = """
@@ -235,4 +236,3 @@ with DAG(
     [gen_ghz, pack_img] >> trigger_dag_train
     [gen_ghz, pack_img] >> send_kaggle
     [gen_ghz, pack_img] >> send_hf
-

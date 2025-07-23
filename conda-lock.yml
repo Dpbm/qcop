@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: d5dc6a9a0cbeec978d7fe04c99759b76d7836da36f835ebbe32cf769709aee1f
+    linux-64: c7eba7d62c27b8b5c74df11fe4063a844fe45927b2b03a3ea6ce35e1968c1e24
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -1242,6 +1242,16 @@ package:
     sha256: d6f13f9b5ce549448c01e4dfe08ea8d1772e6078799af2c1c8d09e941230a90d
   category: main
   optional: false
+- name: hf-xet
+  version: 1.1.5
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/6d/2f/6cad7b5fe86b7652579346cb7f85156c11761df26435651cbba89376cd2c/hf_xet-1.1.5-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  hash:
+    sha256: fc874b5c843e642f45fd85cda1ce599e123308ad2901ead23d3510a47ff506d1
+  category: main
+  optional: false
 - name: httpcore
   version: 1.0.9
   manager: pip
@@ -1266,6 +1276,24 @@ package:
   url: https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl
   hash:
     sha256: d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad
+  category: main
+  optional: false
+- name: huggingface-hub
+  version: 0.33.4
+  manager: pip
+  platform: linux-64
+  dependencies:
+    filelock: '*'
+    fsspec: '>=2023.5.0'
+    packaging: '>=20.9'
+    pyyaml: '>=5.1'
+    requests: '*'
+    tqdm: '>=4.42.1'
+    typing-extensions: '>=3.7.4.3'
+    hf-xet: '>=1.1.2,<2.0.0'
+  url: https://files.pythonhosted.org/packages/46/7b/98daa50a2db034cab6cd23a3de04fa2358cb691593d28e9130203eb7a805/huggingface_hub-0.33.4-py3-none-any.whl
+  hash:
+    sha256: 09f9f4e7ca62547c70f8b82767eefadd2667f4e116acba2e3e62a5a81815a7bb
   category: main
   optional: false
 - name: ibm-cloud-sdk-core
@@ -1324,6 +1352,16 @@ package:
     sha256: f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2
   category: main
   optional: false
+- name: iniconfig
+  version: 2.1.0
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/2c/e1/e6716421ea10d38022b952c159d5161ca1193197fb744506875fbb87ea7b/iniconfig-2.1.0-py3-none-any.whl
+  hash:
+    sha256: 9deba5723312380e77435581c6bf4935c94cbfab9b1ed33ef8d238ea168eb760
+  category: main
+  optional: false
 - name: itsdangerous
   version: 2.2.0
   manager: pip
@@ -1378,6 +1416,20 @@ package:
   url: https://files.pythonhosted.org/packages/01/0e/b27cdbaccf30b890c40ed1da9fd4a3593a5cf94dae54fb34f8a4b74fcd3f/jsonschema_specifications-2025.4.1-py3-none-any.whl
   hash:
     sha256: 4653bffbd6584f7de83a67e0d620ef16900b390ddc7939d56684d6c81e33f1af
+  category: main
+  optional: false
+- name: kagglehub
+  version: 0.3.12
+  manager: pip
+  platform: linux-64
+  dependencies:
+    packaging: '*'
+    pyyaml: '*'
+    requests: '*'
+    tqdm: '*'
+  url: https://files.pythonhosted.org/packages/49/bf/c2a24567bb6bd80c1fe7cb2ed1a332666476f69c313256aff96094bef93e/kagglehub-0.3.12-py3-none-any.whl
+  hash:
+    sha256: 6eeb7c5c8e1f25a28e9b26d3d8ed0c24a4a32f763ea5de6e1b3aabba442f2a26
   category: main
   optional: false
 - name: kiwisolver
@@ -2034,6 +2086,16 @@ package:
     sha256: 4b1388a4f6875d7e2aff5c4ca1cc16c545ed41dd8bb596cefea80111db353a34
   category: main
   optional: false
+- name: psycopg2-binary
+  version: 2.9.10
+  manager: pip
+  platform: linux-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/10/db/d09da68c6a0cdab41566b74e0a6068a425f077169bed0946559b7348ebe9/psycopg2_binary-2.9.10-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  hash:
+    sha256: 8cd9b4f2cfab88ed4a9106192de509464b75a906462fb846b936eabe45c2063e
+  category: main
+  optional: false
 - name: pycparser
   version: '2.22'
   manager: pip
@@ -2129,6 +2191,20 @@ package:
   url: https://files.pythonhosted.org/packages/57/ea/b3c1438839d8724beff7b31ec42b9d041265dc9ca27ccb54477d442bfbcf/pyspnego-0.11.2-py3-none-any.whl
   hash:
     sha256: 74abc1fb51e59360eb5c5c9086e5962174f1072c7a50cf6da0bda9a4bcfdfbd4
+  category: main
+  optional: false
+- name: pytest
+  version: 8.4.1
+  manager: pip
+  platform: linux-64
+  dependencies:
+    iniconfig: '>=1'
+    packaging: '>=20'
+    pluggy: '>=1.5,<2'
+    pygments: '>=2.7.2'
+  url: https://files.pythonhosted.org/packages/29/16/c8a903f4c4dffe7a12843191437d7cd8e32751d5de349d45d3fe69544e87/pytest-8.4.1-py3-none-any.whl
+  hash:
+    sha256: 539c70ba6fcead8e78eebbf1115e8b589e7565830d7d006a8723f19ac8a0afb7
   category: main
   optional: false
 - name: python-daemon

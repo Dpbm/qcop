@@ -19,13 +19,11 @@ with DAG(dag_id="train_model", description="train vision model") as dag:
     args.target_folder = folder
 
     checkpoint = get_latest_model_checkpoint(folder)
-    if(checkpoint):
+    if checkpoint:
         args.checkpoint = checkpoint
 
     train = PythonOperator(
-        task_id="train_model", 
-        python_callable=setup_and_run_training, 
-        op_args=[args]
+        task_id="train_model", python_callable=setup_and_run_training, op_args=[args]
     )
 
     train.doc_md = """
@@ -33,19 +31,15 @@ with DAG(dag_id="train_model", description="train vision model") as dag:
     """
 
     upload_kaggle = PythonOperator(
-        task_id="upload_kaggle",
-        python_callable=upload_model_kaggle,
-        op_args=[folder]
+        task_id="upload_kaggle", python_callable=upload_model_kaggle, op_args=[folder]
     )
 
     upload_kaggle.doc_md = """
     Send model file to kaggle
     """
-    
+
     upload_hf = PythonOperator(
-        task_id="upload_hugginface",
-        python_callable=upload_model_hf,
-        op_args=[folder]
+        task_id="upload_hugginface", python_callable=upload_model_hf, op_args=[folder]
     )
 
     upload_hf.doc_md = """

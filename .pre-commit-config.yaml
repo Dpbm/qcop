@@ -10,3 +10,14 @@ repos:
     rev: v1.16.0
     hooks:
     -   id: mypy
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: run tests
+        entry: python -m pytest
+        language: conda
+        types: [python]
+        pass_filenames: false
+        stages:
+          - pre-commit

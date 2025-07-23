@@ -10,7 +10,8 @@ from utils.datatypes import FilePath
 from export.helpers import get_latest_model
 from utils.constants import MODEL_FILE_PREFIX, CHECKPOINT_FILE_PREFIX
 
-def upload_dataset(folder:FilePath):
+
+def upload_dataset(folder: FilePath):
     """
     Upload dataset to huggingface
     """
@@ -23,15 +24,16 @@ def upload_dataset(folder:FilePath):
         repo_id=dataset_name,
         repo_type="dataset",
         ignore_patterns=[
-            "dataset/", 
-            "*.json", 
-            f"{MODEL_FILE_PREFIX}*", 
-            f"{CHECKPOINT_FILE_PREFIX}*", 
+            "dataset/",
+            "*.json",
+            f"{MODEL_FILE_PREFIX}*",
+            f"{CHECKPOINT_FILE_PREFIX}*",
             "*.png",
-        ]
+        ],
     )
 
-def upload_model(folder:str):
+
+def upload_model(folder: str):
     """
     Get model file and upload it to huggingface
     """
@@ -40,12 +42,11 @@ def upload_model(folder:str):
     api = HfApi(token=os.getenv("HF_TOKEN"))
     model_name = str(os.getenv("HF_MODEL_REPO"))
     api.upload_file(
-        path_or_fileobj=os.path.join(folder,latest_model),
+        path_or_fileobj=os.path.join(folder, latest_model),
         path_in_repo=latest_model,
         repo_id=model_name,
         repo_type="model",
     )
-
 
 
 if __name__ == "__main__":
@@ -55,4 +56,3 @@ if __name__ == "__main__":
 
     upload_dataset(args.path)
     upload_model(args.path)
-

@@ -56,7 +56,8 @@ def get_measurements(n_qubits: int) -> List[int]:
     qubits = list(range(n_qubits))
     return random.sample(qubits, total_measurements)
 
-def get_latest_model_checkpoint(target_folder:FilePath) -> Optional[FilePath]:
+
+def get_latest_model_checkpoint(target_folder: FilePath) -> Optional[FilePath]:
     """Returns the path of the lastest checkpoint"""
 
     if not os.path.exists(target_folder):
@@ -78,8 +79,3 @@ def get_latest_model_checkpoint(target_folder:FilePath) -> Optional[FilePath]:
     file_index = modification_time.index(latest_time)
 
     return files[file_index]
-
-
-
-
-
