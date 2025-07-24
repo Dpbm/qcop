@@ -1,7 +1,11 @@
 {
     "cSpell.words": [
+        "firstname",
         "isready",
+        "lastname",
+        "mypy",
         "postgresql",
+        "pytest",
         "PYTHONPATH"
     ]
 }

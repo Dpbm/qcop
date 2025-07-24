@@ -1,6 +1,6 @@
 """Train ResNet based model."""
 
-from typing import Optional, Tuple, List, Any, TypedDict, Literal
+from typing import Optional, Tuple, List, Any, TypedDict, Literal, Callable
 from collections import OrderedDict
 import sys
 import os
@@ -176,6 +176,7 @@ class Model(torch.nn.Module):
                 Block(256, 512, first_stride=2),
                 Block(512, 512),
                 Block(512, 512),
+                Block(512, 512),
             ]
         )
 
@@ -342,7 +343,7 @@ def one_epoch(
     dataset: DataLoader,
     opt: torch.optim.Optimizer,
     model: Model,
-    loss_fn: nn.modules.loss._Loss,
+    loss_fn: Callable,
     scheduler: torch.optim.lr_scheduler.LRScheduler,
 ):
     """Run one epoch on data"""
@@ -360,9 +361,10 @@ def one_epoch(
         if DEBUG:
             print("%smodel output: %s%s" % (Colors.YELLOWFG, str(output), Colors.ENDC))
 
-        loss = loss_fn(
-            output.log(), label
-        )  # the loss function requires our data to be in log format
+        # loss = loss_fn(
+        #     output.log(), label
+        # )  # the loss function requires our data to be in log format
+        loss = loss_fn(output, label)
 
         loss.backward()
 
@@ -392,6 +394,16 @@ def get_model(device: Device, state: Optional[StateDict] = None) -> Model:
         model.load_state_dict(state)
 
     return model
+
+def loss_fn(output:torch.Tensor, label:torch.Tensor) -> torch.Tensor:
+    """
+    Apply a loss function.
+
+    Given that the output and the label are vectors. We can find the distance between them.
+    """
+    
+    distance = torch.sqrt(torch.sum((label - output)**2))
+    return distance
 
 
 def train(
@@ -447,7 +459,7 @@ def train(
     if checkpoint.was_provided():
         history.load()
 
-    loss_fn = nn.KLDivLoss(reduction="batchmean")
+    #loss_fn = nn.KLDivLoss(reduction="batchmean")
     lr = 0.1
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -489,7 +501,7 @@ def train(
                 outputs.append(output)
                 targets.append(torch.Tensor(label))
 
-                loss = loss_fn(output.log(), label)
+                loss = loss_fn(output, label)
                 running_loss += loss
 
         avg_loss = running_loss / max_test
@@ -527,7 +539,7 @@ def train(
             outputs.append(output)
             targets.append(torch.Tensor(label))
 
-            loss = loss_fn(output.log(), label)
+            loss = loss_fn(output, label)
             eval_loss += loss
 
     avg_loss = eval_loss / max_eval
@@ -562,7 +574,7 @@ def get_device() -> Device:
 def get_RMSE(targets: List[torch.Tensor], outputs: List[torch.Tensor]):
     """Root Mean Squared Error."""
     diff_sum = sum(
-        [(torch.sum(target - output)) ** 2 for target, output in zip(targets, outputs)]
+        [torch.sum((target - output) ** 2) for target, output in zip(targets, outputs)]
     )
     n = len(targets)
     return torch.sqrt((1 / n) * diff_sum)
@@ -572,6 +584,9 @@ def run_debug_experiemnt(args: Arguments):
     """
     Run Manual tests.
     """
+
+    print("%sRunning in DEBUG mode%s"%(Colors.YELLOWFG, Colors.ENDC))
+
     device = get_device()
 
     checkpoint = Checkpoint(args.checkpoint)
@@ -604,7 +619,6 @@ def setup_and_run_training(args: Arguments):
     checkpoint = Checkpoint(args.checkpoint)
     checkpoint.load()
 
-    # TODO: USE PYTORCH SCRIPTING (JIT)
     model = train(
         device,
         checkpoint,

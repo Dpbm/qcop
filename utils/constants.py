@@ -4,7 +4,7 @@ import os
 
 DEBUG = os.environ.get("DEBUG") or False
 
-DEFAULT_EPOCHS = 80
+DEFAULT_EPOCHS = 100
 
 DEFAULT_SHOTS = 1000
 DEFAULT_NUM_QUBITS = 5
