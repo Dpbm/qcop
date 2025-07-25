@@ -1,19 +1,18 @@
 """Generate dataset"""
 
-from typing import Dict, List, TypedDict, Tuple, Any, Optional
+from typing import Dict, List, TypedDict, Any, Optional
 from enum import Enum
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
-from itertools import product
-import random
+from itertools import product, combinations
 import gc
 import csv
 
 from qiskit import QuantumCircuit, ClassicalRegister
-from qiskit.transpiler import generate_preset_pass_manager, StagedPassManager
+from qiskit.transpiler import generate_preset_pass_manager
 
 from qiskit_aer import AerSimulator
 from qiskit_aer.primitives import Sampler
@@ -36,12 +35,13 @@ from utils.datatypes import FilePath, df_schema, Dimensions
 from utils.image import transform_image
 from utils.colors import Colors
 from generate.random_circuit import get_random_circuit
-from utils.helpers import get_measurements
 
 Schema = Dict[str, Any]
 Dist = Dict[int, float]
 States = List[int]
 Measurements = List[int]
+MeasurementsCombinations = List[Measurements]
+Rows = List[List[Any]]
 
 
 class Stages(Enum):
@@ -54,6 +54,8 @@ class Stages(Enum):
 
 class Checkpoint:
     """Class to handle generate data checkpoints"""
+
+    __slots__ = ["_path", "_stage", "_index", "_files"]
 
     def __init__(self, path: Optional[FilePath]):
         self._path = path
@@ -150,41 +152,6 @@ class CircuitResult(TypedDict):
     hash: str
 
 
-def generate_circuit(
-    circuit_image_path: FilePath, pm: StagedPassManager, n_qubits: int, total_gates: int
-) -> Tuple[QuantumCircuit, int, Measurements]:
-    """Generate circuit and return the isa version of the circuit, its depth and the qubits that were measured"""
-
-    # non-interactive backend
-    matplotlib.use("Agg")
-
-    qc = get_random_circuit(n_qubits, total_gates)
-
-    type_of_meas = random.randint(0, 1)
-    measurements = list(range(n_qubits))
-
-    if type_of_meas == 0:
-        measurements = get_measurements(n_qubits)
-        total_measurements = len(measurements)
-
-        classical_register = ClassicalRegister(total_measurements)
-        qc.add_register(classical_register)
-        qc.measure(measurements, classical_register)
-    else:
-        qc.measure_all()
-
-    drawing = qc.draw("mpl", filename=circuit_image_path)
-    plt.close(drawing)
-
-    depth = qc.depth()
-    isa_qc = pm.run(qc)
-
-    # release quantum circuit
-    del qc
-    del drawing
-    gc.collect()
-
-    return isa_qc, depth, measurements
 
 
 def get_circuit_results(qc: QuantumCircuit, sampler: Sampler, shots: int) -> Dist:
@@ -200,45 +167,77 @@ def fix_dist_gaps(dist: Dist, states: States):
             dist[state] = 0
 
 
-def generate_image(
-    index: int,
+def generate_circuit_images(
+    base_index: int,
     states: States,
-    image_path: FilePath,
+    measurements: MeasurementsCombinations,
+    base_image_path: FilePath,
     n_qubits: int,
     total_gates: int,
     shots: int,
-) -> CircuitResult:
-    """Run an experiment, save its image and return its results"""
+) -> List[CircuitResult]:
+    """
+    Run an experiment, save its images and return its results for different, combinations
+    of measurements.
+    """
 
     sim = AerSimulator()
     pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
-    isa_qc, depth, measurements = generate_circuit(
-        image_path, pm, n_qubits, total_gates
-    )
-
-    with open(image_path, "rb") as file:
-        file_hash = hashlib.md5(file.read()).hexdigest()
-
     sampler = Sampler()
-    result = get_circuit_results(isa_qc, sampler, shots)
-    fix_dist_gaps(result, states)
+    results : List[CircuitResult] = []
+    
+    # non-interactive backend
+    matplotlib.use("Agg")
+
+    qc = get_random_circuit(n_qubits, total_gates)
+    
+    for index, measurement in enumerate(measurements):
+        image_index = base_index + index
+        image_path = os.path.join(base_image_path, '%d.png'%(image_index))
+
+        qc_copy = qc.copy()
+        total_measurements = len(measurement)
+        classical_register = ClassicalRegister(total_measurements)
+        qc_copy.add_register(classical_register)
+        qc_copy.measure(measurement, list(range(total_measurements)))
+
+        drawing = qc_copy.draw("mpl", filename=image_path)
+        plt.close(drawing)
+        del drawing
+
+        depth = qc_copy.depth()
+        isa_qc = pm.run(qc_copy)
+        del qc_copy
+
+        with open(image_path, "rb") as file:
+            file_hash = hashlib.md5(file.read()).hexdigest()
+
+        outcomes = get_circuit_results(isa_qc, sampler, shots)
+        fix_dist_gaps(outcomes, states)
+
+        del isa_qc
+        gc.collect()
+
+
+        # once we have more than a few combinations, depending on how many threads we
+        # start, it can use a lot o memory. It also depends on how many states are possible, growing
+        # exponentially with the number of qubits (2^n).
+        results.append({
+            "index": image_index,
+            "depth": depth,
+            "file": image_path,
+            "result": json.dumps(list(outcomes.values())),
+            "hash": file_hash,
+            "measurements": json.dumps(measurement),
+        })
 
     # clear data
     del sim
     del pm
     del sampler
-    del isa_qc
     gc.collect()
 
-    return {
-        "index": index,
-        "depth": depth,
-        "file": image_path,
-        "result": json.dumps(list(result.values())),
-        "hash": file_hash,
-        "measurements": json.dumps(measurements),
-    }
-
+    return results
 
 def generate_images(
     target_folder: FilePath,
@@ -260,6 +259,14 @@ def generate_images(
         int("".join(comb), 2) for comb in product("01", repeat=n_qubits)
     ]
 
+    # get all measurement combinations
+    # may be expensive with a large number of qubits, but for 5,6,... it's good
+    qubits_iter = list(range(n_qubits))
+    measurement_combs : MeasurementsCombinations = [ qubits_iter ] # start with [[0,1,2,3,4,....,n-1]]
+    for amount in range(1,n_qubits):
+       measurement_combs = [ *measurement_combs, *list(combinations(qubits_iter,amount))] # type: ignore
+    total_measurement_combs = len(measurement_combs)
+
     base_dataset_path = dataset_path(target_folder)
 
     index = checkpoint.index
@@ -268,14 +275,13 @@ def generate_images(
             args = []
 
             for i in range(total_threads):
-                filename = "%d.jpeg" % (index)
-                circuit_image_path = os.path.join(base_dataset_path, filename)
-
+                base_index = index*total_measurement_combs
                 args.append(
                     (
-                        index,
+                        base_index,
                         bitstrings_to_int,
-                        circuit_image_path,
+                        measurement_combs,
+                        base_dataset_path,
                         n_qubits,
                         total_gates,
                         shots,
@@ -284,7 +290,7 @@ def generate_images(
                 index += 1
 
             with ThreadPoolExecutor(max_workers=total_threads) as pool:
-                threads = [pool.submit(generate_image, *arg) for arg in args]  # type:ignore
+                threads = [pool.submit(generate_circuit_images, *arg) for arg in args]  # type:ignore
 
                 # The best would be using the polars scan_csv and sink_csv to
                 # write memory efficient queries easily.
@@ -297,10 +303,9 @@ def generate_images(
 
                 # df = open_csv(dataset_file_path)
 
-                rows = []
+                rows : Rows  = []
                 for future in as_completed(threads):  # type: ignore
-                    values = list(future.result().values())
-                    rows.append(values)
+                    rows = [*rows, *[list(result.values()) for result in future.result()]]
 
                 append_rows_to_df(dataset_file_path, rows)
 
@@ -432,7 +437,7 @@ def save_df(df: pl.LazyFrame, file_path: FilePath):
     df.sink_csv(file_path)
 
 
-def append_rows_to_df(file_path: FilePath, rows: List[List[Any]]):
+def append_rows_to_df(file_path: FilePath, rows: Rows):
     """
     Use pythons built-in csv library to append rows into a file
     without loading it into memory directly.

@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 TARGET_PATH ?= "."
 
-clean-all: clean-dataset clean-pred clean-ghz clean-model clean-checkpoints clean-history
+clean-all: clean-dataset clean-pred clean-ghz clean-model clean-checkpoints clean-history clean-gen-checkpoint
 
 clean-dataset:
 	rm -rf $(TARGET_PATH)/dataset/ $(TARGET_PATH)/dataset.csv $(TARGET_PATH)/*.h5 $(TARGET_PATH)/dataset-images.zip
@@ -17,6 +17,9 @@ clean-model:
 
 clean-checkpoints:
 	rm -rf $(TARGET_PATH)/checkpoint_*
+
+clean-gen-checkpoint:
+	rm -rf $(TARGET_PATH)/gen_checkpoint.json
 
 clean-history:
 	rm -rf $(TARGET_PATH)/history.json
