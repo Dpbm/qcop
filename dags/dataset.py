@@ -25,7 +25,7 @@ from utils.constants import (
     DEFAULT_NEW_DIM,
     DEFAULT_MAX_TOTAL_GATES,
     DEFAULT_SHOTS,
-    DEFAULT_DATASET_SIZE,
+    DEFAULT_AMOUNT_OF_CIRCUITS,
     DEFAULT_THREADS,
     images_gen_checkpoint_file,
 )
@@ -117,7 +117,7 @@ with DAG(
             DEFAULT_NUM_QUBITS,
             DEFAULT_MAX_TOTAL_GATES,
             DEFAULT_SHOTS,
-            DEFAULT_DATASET_SIZE,
+            DEFAULT_AMOUNT_OF_CIRCUITS,
             DEFAULT_THREADS,
             checkpoint,
         ],

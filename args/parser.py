@@ -11,7 +11,7 @@ from utils.constants import (
     DEFAULT_MAX_TOTAL_GATES,
     DEFAULT_THREADS,
     DEFAULT_BATCH_SIZE,
-    DEFAULT_DATASET_SIZE,
+    DEFAULT_AMOUNT_OF_CIRCUITS,
     DEFAULT_NEW_DIM,
     DEFAULT_TRAIN_PERCENTAGE,
     DEFAULT_TEST_PERCENTAGE,
@@ -24,6 +24,21 @@ from utils.datatypes import Dimensions, FilePath
 class Arguments:
     """Parsed args types"""
 
+    __slots__ = [
+        "_epochs", 
+        "_batch_size", 
+        "_train_size", 
+        "_test_size", 
+        "_threads", 
+        "_shots", 
+        "_n_qubits", 
+        "_max_gates", 
+        "_amount_circuits",
+        "_target_folder",
+        "_checkpoint",
+        "_new_image_dim"
+    ]
+
     def __init__(self):
         """set default arguments"""
 
@@ -35,7 +50,7 @@ class Arguments:
         self._shots = DEFAULT_SHOTS
         self._n_qubits = DEFAULT_NUM_QUBITS
         self._max_gates = DEFAULT_MAX_TOTAL_GATES
-        self._dataset_size = DEFAULT_DATASET_SIZE
+        self._amount_circuits = DEFAULT_AMOUNT_OF_CIRCUITS
         self._target_folder = DEFAULT_TARGET_FOLDER
         self._checkpoint = DEFAULT_CHECKPOINT
         self._new_image_dim = DEFAULT_NEW_DIM
@@ -50,7 +65,7 @@ class Arguments:
         self._shots = args.shots
         self._n_qubits = args.n_qubits
         self._max_gates = args.max_gates
-        self._dataset_size = args.dataset_size
+        self._amount_circuits = args.amount_circuits
         self._target_folder = args.target_folder
         self._checkpoint = args.checkpoint
         self._new_image_dim = args.new_image_dim
@@ -136,14 +151,14 @@ class Arguments:
         self._max_gates = value
 
     @property
-    def dataset_size(self) -> int:
-        """Get dataset_size data"""
-        return self._dataset_size  # type: ignore
+    def amount_circuits(self) -> int:
+        """Get amount_circuits data"""
+        return self._amount_circuits  # type: ignore
 
-    @dataset_size.setter
-    def dataset_size(self, value: int):
-        """Set dataset_size data"""
-        self._dataset_size = value
+    @amount_circuits.setter
+    def amount_circuits(self, value: int):
+        """Set amount_circuits data"""
+        self._amount_circuits = value
 
     @property
     def target_folder(self) -> FilePath:
@@ -184,7 +199,7 @@ class Arguments:
         string += f"shots: {self._shots}\n"
         string += f"n qubits: {self._n_qubits}\n"
         string += f"max gates: {self._max_gates}\n"
-        string += f"dataset size: {self._dataset_size}\n"
+        string += f"amount circuits: {self._amount_circuits}\n"
         string += f"target_folder: {self._target_folder}\n"
         string += f"checkpoint: {self._checkpoint}\n"
         string += f"new image dim: {self._new_image_dim}\n"
@@ -210,7 +225,7 @@ def parse_args() -> Arguments:
     parser.add_argument("--n-qubits", type=int, default=DEFAULT_NUM_QUBITS)
     parser.add_argument("--max-gates", type=int, default=DEFAULT_MAX_TOTAL_GATES)
 
-    parser.add_argument("--dataset-size", type=int, default=DEFAULT_DATASET_SIZE)
+    parser.add_argument("--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS)
     parser.add_argument("--target-folder", type=str, default=DEFAULT_TARGET_FOLDER)
     parser.add_argument("--new-image-dim", type=int, nargs=2, default=DEFAULT_NEW_DIM)
 

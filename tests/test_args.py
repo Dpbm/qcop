@@ -4,7 +4,7 @@ from args.parser import parse_args
 from utils.constants import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_CHECKPOINT,
-    DEFAULT_DATASET_SIZE,
+    DEFAULT_AMOUNT_OF_CIRCUITS,
     DEFAULT_EPOCHS,
     DEFAULT_MAX_TOTAL_GATES,
     DEFAULT_NEW_DIM,
@@ -39,7 +39,7 @@ class TestArgs:
 
         assert args.batch_size == DEFAULT_BATCH_SIZE
         assert args.checkpoint == DEFAULT_CHECKPOINT
-        assert args.dataset_size == DEFAULT_DATASET_SIZE
+        assert args.amount_circuits == DEFAULT_AMOUNT_OF_CIRCUITS
         assert args.epochs == DEFAULT_EPOCHS
         assert args.max_gates == DEFAULT_MAX_TOTAL_GATES
         assert args.n_qubits == DEFAULT_NUM_QUBITS
@@ -71,7 +71,7 @@ class TestArgs:
             "6",
             "--max-gates",
             "103",
-            "--dataset-size",
+            "--amount-circuits",
             "3233",
             "--target-folder",
             "another",
@@ -91,6 +91,6 @@ class TestArgs:
         assert args.shots == int(sys.argv[14])
         assert args.n_qubits == int(sys.argv[16])
         assert args.max_gates == int(sys.argv[18])
-        assert args.dataset_size == int(sys.argv[20])
+        assert args.amount_circuits == int(sys.argv[20])
         assert args.target_folder == sys.argv[22]
         assert args.new_image_dim == [int(sys.argv[24]), int(sys.argv[25])]

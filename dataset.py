@@ -244,7 +244,7 @@ def generate_images(
     n_qubits: int,
     total_gates: int,
     shots: int,
-    dataset_size: int,
+    amount_circuits: int,
     total_threads: int,
     checkpoint: Checkpoint,
 ):
@@ -270,8 +270,8 @@ def generate_images(
     base_dataset_path = dataset_path(target_folder)
 
     index = checkpoint.index
-    with tqdm(total=dataset_size, initial=index) as progress:
-        while index < dataset_size:
+    with tqdm(total=amount_circuits, initial=index) as progress:
+        while index < amount_circuits:
             args = []
 
             for i in range(total_threads):
@@ -477,7 +477,7 @@ def main(args: Arguments):
             args.n_qubits,
             args.max_gates,
             args.shots,
-            args.dataset_size,
+            args.amount_circuits,
             args.threads,
             checkpoint,
         )
