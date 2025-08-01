@@ -381,9 +381,10 @@ def transform_images(
     current_index = checkpoint.index
     amount_of_rows_per_iteration = 500
 
-    images: List[FilePath] = []
+    max_width, max_height = new_dim
+
     while True:
-        collected_rows = (
+        collected_rows :List[FilePath] = (
             df.slice(offset=current_index, length=amount_of_rows_per_iteration)
             .collect()
             .get_column("file")
@@ -393,21 +394,18 @@ def transform_images(
         if len(collected_rows) <= 0:
             break
 
-        images = [*images, *collected_rows]
+        image_i = checkpoint.index
+        with h5py.File(images_h5_file(target_folder), "a") as file:
+            for image_path in tqdm(collected_rows):
+                with Image.open(image_path) as img:
+                    tensor = transform_image(img, max_width, max_height)
+                    file.create_dataset(f"{image_i}", data=tensor)
+
+                image_i += 1
+                checkpoint.index = image_i
+                checkpoint.save()
+
         current_index += amount_of_rows_per_iteration
-
-    max_width, max_height = new_dim
-
-    image_i = checkpoint.index
-    with h5py.File(images_h5_file(target_folder), "a") as file:
-        for image_path in tqdm(images):
-            with Image.open(image_path) as img:
-                tensor = transform_image(img, max_width, max_height)
-                file.create_dataset(f"{image_i}", data=tensor)
-
-            image_i += 1
-            checkpoint.index = image_i
-            checkpoint.save()
 
 
 def crate_dataset_folder(base_folder: FilePath):
