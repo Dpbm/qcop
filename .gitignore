@@ -11,3 +11,4 @@ model_*
 *.jpeg
 history.json
 data/
+!tests/dataset.csv

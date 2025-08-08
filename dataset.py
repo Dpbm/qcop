@@ -30,6 +30,7 @@ from utils.constants import (
     dataset_file,
     images_h5_file,
     images_gen_checkpoint_file,
+    dataset_file_tmp
 )
 from utils.datatypes import FilePath, df_schema, Dimensions
 from utils.image import transform_image
@@ -326,38 +327,32 @@ def generate_images(
             checkpoint.index = index
             checkpoint.save()
 
-
 def remove_duplicated_files(target_folder: FilePath, checkpoint: Checkpoint):
     """Remove images that are duplicated based on its hash"""
     print("%sRemoving duplicated images%s" % (Colors.GREENBG, Colors.ENDC))
 
     if not checkpoint.files:  # empty list
         dataset_file_path = dataset_file(target_folder)
+        dataset_file_path_tmp = dataset_file_tmp(target_folder)
 
         df = open_csv(dataset_file_path)
+        clean_df = clean_duplicated_rows_df(df)
+        duplicated_files = get_duplicated_files_list_by_diff(df, clean_df)
 
-        # once if we stop at some point the dataset generation,
-        # when we resume it, there's some chance of have another row with the same
-        # file index. The file is overwritten, but another line will be added and
-        # it can raise inconsistency. So before checking distinct hashes, we check
-        # for distinct file paths and set is at the default.
-        df = df.filter(pl.col("file").is_first_distinct())
+        checkpoint.files = duplicated_files
+        
+        # the combination of scan_csv + sink_csv is not stable. However, we can
+        # get around this issue by using a filter in between and saving in a tmp file
+        save_df(clean_df, dataset_file_path_tmp)
+        
+        # delete the old file and rename the tmp one to the correct filename
+        os.remove(dataset_file_path)
+        os.rename(dataset_file_path_tmp, dataset_file_path)
 
-        clean_df = df.filter(pl.col("hash").is_first_distinct())
-        # even though using the combination scan_csv + sink_csv is not a good idea, using
-        # it interchanged with a filter
-        save_df(clean_df, dataset_file_path)
-
-        duplicated_files = (
-            df.join(clean_df, on=df.columns, how="anti").collect().get_column("file")
-        )
-
-        checkpoint.files = duplicated_files.to_list()
-
-        # to avoid useless memory usage
-        del duplicated_files
-        del clean_df
+        # you must not delete duplicated_files since it's a piece 
+        # of memory that'll be used later
         del df
+        del clean_df
         gc.collect()
 
         checkpoint.save()
@@ -368,6 +363,32 @@ def remove_duplicated_files(target_folder: FilePath, checkpoint: Checkpoint):
 
         checkpoint.files.remove(file)
         checkpoint.save()
+
+def clean_duplicated_rows_df(df:pl.LazyFrame) -> pl.LazyFrame:
+    """
+    Get a df and clean all the rows that have duplicated
+    filepaths or hashes.
+    """
+
+    # once if we stop at some point the dataset generation,
+    # when we resume it, there's some chance of have another row with the same
+    # file index. The file is overwritten, but another line will be added and
+    # it can raise inconsistency. So before checking distinct hashes, we check
+    # for distinct file paths and set is at the default.
+    clean_df = df.filter(pl.col("file").is_first_distinct())
+    clean_df = clean_df.filter(pl.col("hash").is_first_distinct())
+
+    return clean_df
+
+def get_duplicated_files_list_by_diff(df:pl.LazyFrame, clean_df:pl.LazyFrame) -> List[str]:
+    """
+    Get the files that are duplicated by applying a df diff.
+    """
+    
+
+    duplicated_files = df.join(clean_df, on=df.collect_schema().names(), how="anti").collect().get_column("file") 
+    
+    return duplicated_files.to_list() # type: ignore
 
 
 def transform_images(
