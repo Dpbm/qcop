@@ -29,6 +29,7 @@ from utils.constants import (
     DEFAULT_AMOUNT_OF_CIRCUITS,
     DEFAULT_THREADS,
     images_gen_checkpoint_file,
+    dataset_file
 )
 from ghz import gen_circuit
 from export.kaggle import upload_dataset as upload_dataset_kaggle
@@ -106,7 +107,7 @@ with DAG(
     """
 
     gen_df = PythonOperator(
-        task_id="gen_df", python_callable=start_df, op_args=[folder]
+        task_id="gen_df", python_callable=start_df, op_args=[dataset_file(folder)]
     )
     gen_df.doc_md = """
     Generate an empty dataframe and saves it as an csv file.

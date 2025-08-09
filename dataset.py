@@ -384,8 +384,6 @@ def get_duplicated_files_list_by_diff(df:pl.LazyFrame, clean_df:pl.LazyFrame) ->
     """
     Get the files that are duplicated by applying a df diff.
     """
-    
-
     duplicated_files = df.join(clean_df, on=df.collect_schema().names(), how="anti").collect().get_column("file") 
     
     return duplicated_files.to_list() # type: ignore
@@ -467,15 +465,18 @@ def append_rows_to_df(file_path: FilePath, rows: Rows):
         writer.writerows(rows)
 
 
-def start_df(base_file_path: FilePath):
+def start_df(filename:FilePath):
     """
     generates an empty df and saves it on a csv file.
 
     It's not a good idea to use the scan_csv+sink_csv, but for
     an empty lazyFrame it works well.
     """
+    if(os.path.exists(filename)):
+        return
+
     df = create_df()
-    save_df(df, dataset_file(base_file_path))
+    save_df(df, filename)
 
     del df
     gc.collect()
@@ -484,7 +485,7 @@ def start_df(base_file_path: FilePath):
 def main(args: Arguments):
     """generate, clean and save dataset and images"""
 
-    crate_dataset_folder(args.target_folder)
+    crate_dataset_folder(dataset_file(args.target_folder))
 
     start_df(args.target_folder)
 

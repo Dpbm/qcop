@@ -1,10 +1,19 @@
 from typing import List
 import os
+import gc
 
 import pytest
 import polars as pl
 
-from dataset import clean_duplicated_rows_df, open_csv, save_df, get_duplicated_files_list_by_diff
+from dataset import (
+    clean_duplicated_rows_df, 
+    open_csv, 
+    save_df, 
+    start_df,
+    get_duplicated_files_list_by_diff
+)
+from utils.datatypes import df_schema
+
 
 @pytest.fixture()
 def base_df() -> str:
@@ -12,6 +21,7 @@ def base_df() -> str:
     The dataset that cotains the correct data.
     """
     return os.path.join(".", "tests", "dataset.csv")
+
 
 @pytest.fixture()
 def tmp_df() -> str:
@@ -52,15 +62,60 @@ def duplicated_files() -> List[str]:
 
 
 @pytest.fixture(autouse=True)
-def clear_file(tmp_df):
+def clear_file(tmp_df, tmp_df2):
     """
     Clear tmp csv file
     """
-    if(not os.path.exists(tmp_df)): 
-        return
-    os.remove(tmp_df)
+    if(os.path.exists(tmp_df)): 
+        os.remove(tmp_df)
+    if(os.path.exists(tmp_df2)): 
+        os.remove(tmp_df2)
 
-class TestDatasetGeneration:
+class TestCSVFile:
+    def test_open_csv(self,base_df):
+        """
+        Should open the df with no problems and cast it 
+        to correct data types.
+        """
+        df = open_csv(base_df).collect()
+
+        assert len(df) == 11
+        assert df.schema == df_schema
+
+    def test_gen_df_no_previous_file(self,tmp_df):
+        """
+        should create a new csv file.
+        """
+
+        assert not os.path.exists(tmp_df)
+        start_df(tmp_df)
+        assert os.path.exists(tmp_df)
+
+        df_data = pl.read_csv(tmp_df)
+        assert len(df_data) == 0
+
+    def test_gen_df_file_already_exists(self,base_df,tmp_df):
+        """
+        Should not overwrite the existent file.
+        """
+
+        df = pl.read_csv(base_df)
+        df.write_csv(tmp_df)
+
+        assert os.path.exists(tmp_df)
+        assert len(pl.read_csv(tmp_df)) == 11
+        start_df(tmp_df)
+        assert os.path.exists(tmp_df)
+        assert len(pl.read_csv(tmp_df)) == 11
+
+
+
+
+
+
+class TestDatasetClean:
+
+
     """Test dataset generation parts"""
 
     def test_clean_duplicated_rows_return_the_correct_of_rows(self, base_df):
@@ -123,7 +178,7 @@ class TestDatasetGeneration:
 
         assert len(target_csv) == 8
 
-    def test_get_duplicated_files_list_by_diff(self,base_df, duplicated_files):
+    def test_get_duplicated_files_list_by_diff(self, base_df, duplicated_files):
         """
         Must take the diff between the raw csv and the cleaned one
         and return a list of files that are duplicated and must be
@@ -135,6 +190,48 @@ class TestDatasetGeneration:
         files_list = get_duplicated_files_list_by_diff(df, clean_df)
 
         assert files_list == duplicated_files
+
+    def test_remove_duplicates_sequence(self, base_df, tmp_df, tmp_df2):
+        """
+        We must be able to run the entire clean up sequence without losing
+        any data.
+        """
+
+        df = pl.read_csv(base_df)
+        df.write_csv(tmp_df)
+
+        del df
+        gc.collect()
+
+
+        df = open_csv(tmp_df)
+        assert len(df.collect()) == 11
+        clean_df = clean_duplicated_rows_df(df)
+        assert len(clean_df.collect()) == 8
+        duplicated_files = get_duplicated_files_list_by_diff(df, clean_df)
+        assert len(duplicated_files) == 3
+
+        save_df(clean_df, tmp_df2)
+
+        assert os.path.exists(tmp_df2)
+        assert len(pl.read_csv(tmp_df2)) == 8
+
+        os.remove(tmp_df)
+        os.rename(tmp_df2, tmp_df)
+        
+        assert os.path.exists(tmp_df)
+        assert len(pl.read_csv(tmp_df)) == 8
+        assert not os.path.exists(tmp_df2)
+
+        del df
+        del clean_df
+        gc.collect()
+
+        assert os.path.exists(tmp_df)
+        assert len(pl.read_csv(tmp_df)) == 8
+
+
+
 
 
 
