@@ -14,7 +14,7 @@ DEFAULT_THREADS = 10
 
 DEFAULT_BATCH_SIZE = 10
 
-DEFAULT_AMOUNT_OF_CIRCUITS = 5000 # this one doesn't reflect exactly the size of the dataset, once the dataset might get either bigger, due to the different combinations of mesurements, or smaller due to duplicated circuits
+DEFAULT_AMOUNT_OF_CIRCUITS = 5000  # this one doesn't reflect exactly the size of the dataset, once the dataset might get either bigger, due to the different combinations of mesurements, or smaller due to duplicated circuits
 
 DEFAULT_TARGET_FOLDER = "."
 

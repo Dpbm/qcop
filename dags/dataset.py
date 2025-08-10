@@ -29,7 +29,7 @@ from utils.constants import (
     DEFAULT_AMOUNT_OF_CIRCUITS,
     DEFAULT_THREADS,
     images_gen_checkpoint_file,
-    dataset_file
+    dataset_file,
 )
 from ghz import gen_circuit
 from export.kaggle import upload_dataset as upload_dataset_kaggle
@@ -98,9 +98,7 @@ with DAG(
     checkpoint = Checkpoint(images_gen_checkpoint_file(folder))
 
     branch_checkpoint = BranchPythonOperator(
-        task_id="check_checkpoint", 
-        python_callable=next_step, 
-        op_args=[checkpoint]
+        task_id="check_checkpoint", python_callable=next_step, op_args=[checkpoint]
     )
     branch_checkpoint.doc_md = """
     Choose the next task based on the current checkpoint.
@@ -125,7 +123,7 @@ with DAG(
             DEFAULT_THREADS,
             checkpoint,
         ],
-        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
+        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,
     )
 
     gen_images.doc_md = """
@@ -147,7 +145,7 @@ with DAG(
         task_id=REMOVE_DUPLICATES_TASK_ID,
         python_callable=remove_duplicated_files,
         op_args=[folder, checkpoint],
-        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
+        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,
     )
 
     remove_duplicates.doc_md = """
@@ -168,7 +166,7 @@ with DAG(
         task_id=TRANSFORM_TASK_ID,
         python_callable=transform_images,
         op_args=[folder, DEFAULT_NEW_DIM, checkpoint],
-        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
+        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS,
     )
 
     transform_img.doc_md = """

@@ -22,5 +22,5 @@ commands = [[ "mypy", { replace = "posargs", default = ["."], extend = true} ]]
 [env.tests]
 description = "run pytest"
 skip_install = false
-deps = ["pytest", "polars"]
+deps = ["pytest", "polars", "torch", "Pillow", "qiskit==2.0.1", "qiskit-aer==0.17.0"]
 commands = [[ "python", "-m", "pytest" ]]

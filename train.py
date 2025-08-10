@@ -395,14 +395,15 @@ def get_model(device: Device, state: Optional[StateDict] = None) -> Model:
 
     return model
 
-def loss_fn(output:torch.Tensor, label:torch.Tensor) -> torch.Tensor:
+
+def loss_fn(output: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     """
     Apply a loss function.
 
     Given that the output and the label are vectors. We can find the distance between them.
     """
-    
-    distance = torch.sqrt(torch.sum((label - output)**2))
+
+    distance = torch.sqrt(torch.sum((label - output) ** 2))
     return distance
 
 
@@ -459,7 +460,7 @@ def train(
     if checkpoint.was_provided():
         history.load()
 
-    #loss_fn = nn.KLDivLoss(reduction="batchmean")
+    # loss_fn = nn.KLDivLoss(reduction="batchmean")
     lr = 0.1
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -585,7 +586,7 @@ def run_debug_experiemnt(args: Arguments):
     Run Manual tests.
     """
 
-    print("%sRunning in DEBUG mode%s"%(Colors.YELLOWFG, Colors.ENDC))
+    print("%sRunning in DEBUG mode%s" % (Colors.YELLOWFG, Colors.ENDC))
 
     device = get_device()
 

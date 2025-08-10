@@ -30,7 +30,7 @@ from utils.constants import (
     dataset_file,
     images_h5_file,
     images_gen_checkpoint_file,
-    dataset_file_tmp
+    dataset_file_tmp,
 )
 from utils.datatypes import FilePath, df_schema, Dimensions
 from utils.image import transform_image
@@ -153,8 +153,6 @@ class CircuitResult(TypedDict):
     hash: str
 
 
-
-
 def get_circuit_results(qc: QuantumCircuit, sampler: Sampler, shots: int) -> Dist:
     """Execute cirucit on sampler. Returns its quasi dist"""
     return sampler.run([qc], shots=shots).result().quasi_dists[0]  # type: ignore
@@ -185,16 +183,16 @@ def generate_circuit_images(
     sim = AerSimulator()
     pm = generate_preset_pass_manager(backend=sim, optimization_level=0)
     sampler = Sampler()
-    results : List[CircuitResult] = []
-    
+    results: List[CircuitResult] = []
+
     # non-interactive backend
     matplotlib.use("Agg")
 
     qc = get_random_circuit(n_qubits, total_gates)
-    
+
     for index, measurement in enumerate(measurements):
         image_index = base_index + index
-        image_path = os.path.join(base_image_path, '%d.png'%(image_index))
+        image_path = os.path.join(base_image_path, "%d.png" % (image_index))
 
         qc_copy = qc.copy()
         total_measurements = len(measurement)
@@ -219,18 +217,19 @@ def generate_circuit_images(
         del isa_qc
         gc.collect()
 
-
         # once we have more than a few combinations, depending on how many threads we
         # start, it can use a lot o memory. It also depends on how many states are possible, growing
         # exponentially with the number of qubits (2^n).
-        results.append({
-            "index": image_index,
-            "depth": depth,
-            "file": image_path,
-            "result": json.dumps(list(outcomes.values())),
-            "hash": file_hash,
-            "measurements": json.dumps(measurement),
-        })
+        results.append(
+            {
+                "index": image_index,
+                "depth": depth,
+                "file": image_path,
+                "result": json.dumps(list(outcomes.values())),
+                "hash": file_hash,
+                "measurements": json.dumps(measurement),
+            }
+        )
 
     # clear data
     del sim
@@ -239,6 +238,7 @@ def generate_circuit_images(
     gc.collect()
 
     return results
+
 
 def generate_images(
     target_folder: FilePath,
@@ -263,9 +263,14 @@ def generate_images(
     # get all measurement combinations
     # may be expensive with a large number of qubits, but for 5,6,... it's good
     qubits_iter = list(range(n_qubits))
-    measurement_combs : MeasurementsCombinations = [ qubits_iter ] # start with [[0,1,2,3,4,....,n-1]]
-    for amount in range(1,n_qubits):
-       measurement_combs = [ *measurement_combs, *list(combinations(qubits_iter,amount))] # type: ignore
+    measurement_combs: MeasurementsCombinations = [
+        qubits_iter
+    ]  # start with [[0,1,2,3,4,....,n-1]]
+    for amount in range(1, n_qubits):
+        measurement_combs = [
+            *measurement_combs,
+            *list(combinations(qubits_iter, amount)),  # type: ignore
+        ]  # type: ignore
     total_measurement_combs = len(measurement_combs)
 
     base_dataset_path = dataset_path(target_folder)
@@ -276,7 +281,7 @@ def generate_images(
             args = []
 
             for i in range(total_threads):
-                base_index = index*total_measurement_combs
+                base_index = index * total_measurement_combs
                 args.append(
                     (
                         base_index,
@@ -304,9 +309,12 @@ def generate_images(
 
                 # df = open_csv(dataset_file_path)
 
-                rows : Rows  = []
+                rows: Rows = []
                 for future in as_completed(threads):  # type: ignore
-                    rows = [*rows, *[list(result.values()) for result in future.result()]]
+                    rows = [
+                        *rows,
+                        *[list(result.values()) for result in future.result()],
+                    ]
 
                 append_rows_to_df(dataset_file_path, rows)
 
@@ -327,6 +335,7 @@ def generate_images(
             checkpoint.index = index
             checkpoint.save()
 
+
 def remove_duplicated_files(target_folder: FilePath, checkpoint: Checkpoint):
     """Remove images that are duplicated based on its hash"""
     print("%sRemoving duplicated images%s" % (Colors.GREENBG, Colors.ENDC))
@@ -340,16 +349,16 @@ def remove_duplicated_files(target_folder: FilePath, checkpoint: Checkpoint):
         duplicated_files = get_duplicated_files_list_by_diff(df, clean_df)
 
         checkpoint.files = duplicated_files
-        
+
         # the combination of scan_csv + sink_csv is not stable. However, we can
         # get around this issue by using a filter in between and saving in a tmp file
         save_df(clean_df, dataset_file_path_tmp)
-        
+
         # delete the old file and rename the tmp one to the correct filename
         os.remove(dataset_file_path)
         os.rename(dataset_file_path_tmp, dataset_file_path)
 
-        # you must not delete duplicated_files since it's a piece 
+        # you must not delete duplicated_files since it's a piece
         # of memory that'll be used later
         del df
         del clean_df
@@ -364,7 +373,8 @@ def remove_duplicated_files(target_folder: FilePath, checkpoint: Checkpoint):
         checkpoint.files.remove(file)
         checkpoint.save()
 
-def clean_duplicated_rows_df(df:pl.LazyFrame) -> pl.LazyFrame:
+
+def clean_duplicated_rows_df(df: pl.LazyFrame) -> pl.LazyFrame:
     """
     Get a df and clean all the rows that have duplicated
     filepaths or hashes.
@@ -380,13 +390,20 @@ def clean_duplicated_rows_df(df:pl.LazyFrame) -> pl.LazyFrame:
 
     return clean_df
 
-def get_duplicated_files_list_by_diff(df:pl.LazyFrame, clean_df:pl.LazyFrame) -> List[str]:
+
+def get_duplicated_files_list_by_diff(
+    df: pl.LazyFrame, clean_df: pl.LazyFrame
+) -> List[str]:
     """
     Get the files that are duplicated by applying a df diff.
     """
-    duplicated_files = df.join(clean_df, on=df.collect_schema().names(), how="anti").collect().get_column("file") 
-    
-    return duplicated_files.to_list() # type: ignore
+    duplicated_files = (
+        df.join(clean_df, on=df.collect_schema().names(), how="anti")
+        .collect()
+        .get_column("file")
+    )
+
+    return duplicated_files.to_list()  # type: ignore
 
 
 def transform_images(
@@ -403,7 +420,7 @@ def transform_images(
     max_width, max_height = new_dim
 
     while True:
-        collected_rows :List[FilePath] = (
+        collected_rows: List[FilePath] = (
             df.slice(offset=current_index, length=amount_of_rows_per_iteration)
             .collect()
             .get_column("file")
@@ -465,14 +482,14 @@ def append_rows_to_df(file_path: FilePath, rows: Rows):
         writer.writerows(rows)
 
 
-def start_df(filename:FilePath):
+def start_df(filename: FilePath):
     """
     generates an empty df and saves it on a csv file.
 
     It's not a good idea to use the scan_csv+sink_csv, but for
     an empty lazyFrame it works well.
     """
-    if(os.path.exists(filename)):
+    if os.path.exists(filename):
         return
 
     df = create_df()

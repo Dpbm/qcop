@@ -25,18 +25,18 @@ class Arguments:
     """Parsed args types"""
 
     __slots__ = [
-        "_epochs", 
-        "_batch_size", 
-        "_train_size", 
-        "_test_size", 
-        "_threads", 
-        "_shots", 
-        "_n_qubits", 
-        "_max_gates", 
+        "_epochs",
+        "_batch_size",
+        "_train_size",
+        "_test_size",
+        "_threads",
+        "_shots",
+        "_n_qubits",
+        "_max_gates",
         "_amount_circuits",
         "_target_folder",
         "_checkpoint",
-        "_new_image_dim"
+        "_new_image_dim",
     ]
 
     def __init__(self):
@@ -225,7 +225,9 @@ def parse_args() -> Arguments:
     parser.add_argument("--n-qubits", type=int, default=DEFAULT_NUM_QUBITS)
     parser.add_argument("--max-gates", type=int, default=DEFAULT_MAX_TOTAL_GATES)
 
-    parser.add_argument("--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS)
+    parser.add_argument(
+        "--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS
+    )
     parser.add_argument("--target-folder", type=str, default=DEFAULT_TARGET_FOLDER)
     parser.add_argument("--new-image-dim", type=int, nargs=2, default=DEFAULT_NEW_DIM)
 
