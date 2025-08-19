@@ -21,7 +21,7 @@ def image_path() -> str:
 @pytest.fixture()
 def image_obj(image_path) -> Image:
     """return a PIL image"""
-    return Image.open(image_path).convert("RGB")
+    return Image.open(image_path)
 
 
 @pytest.fixture()

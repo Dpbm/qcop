@@ -48,6 +48,7 @@ def transform_image(
     transform_level: TransformationLevel = TransformationLevel.ALL,
 ) -> torch.Tensor:
     """Transform and normalize a PIL image into a torch tensor ranging values from 0 to 1"""
+    img = img.convert("RGB")
 
     image_tensor = v2.Compose(
         get_transformations_pipeline(width, height, transform_level)
