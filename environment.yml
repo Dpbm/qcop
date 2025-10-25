@@ -29,5 +29,6 @@ dependencies:
       - mypy
       - types-tqdm
       - pytest
+      - lark
 platforms:
   - linux-64

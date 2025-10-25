@@ -167,13 +167,25 @@ class Model(torch.nn.Module):
                 Block(64, 64),
                 Block(64, 64),
                 Block(64, 64),
+                Block(64, 64),
                 Block(64, 128, first_stride=2),
+                Block(128, 128),
+                Block(128, 128),
+                Block(128, 128),
                 Block(128, 128),
                 Block(128, 128),
                 Block(128, 256, first_stride=2),
                 Block(256, 256),
                 Block(256, 256),
+                Block(256, 256),
+                Block(256, 256),
+                Block(256, 256),
+                Block(256, 256),
+                Block(256, 256),
+                Block(256, 256),
+                Block(256, 256),
                 Block(256, 512, first_stride=2),
+                Block(512, 512),
                 Block(512, 512),
                 Block(512, 512),
                 Block(512, 512),
@@ -322,21 +334,6 @@ class History:
         with open(self._file_path, "r") as file:
             self._data = json.load(file)
 
-    def plot(self, output_file: FilePath):
-        """Plot history"""
-
-        import matplotlib.pyplot as plt
-
-        x = len(self._data["test"])
-
-        plt.plot(x, self._data["test"])
-        plt.plot(x, self._data["rmse"])
-        plt.grid()
-        plt.title("Training progress")
-        plt.xlabel("Epochs")
-        plt.legend(["test", "rmse"])
-        plt.savefig(output_file, bbox_inches="tight")
-        plt.show()
 
 
 def one_epoch(
