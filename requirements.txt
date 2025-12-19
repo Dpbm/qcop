@@ -7,8 +7,8 @@ pylatexenc
 qiskit-ibm-runtime
 qiskit_qasm3_import
 Pillow
-torch
-torchvision
+torch==2.7.0
+torchvision==0.22.0
 h5py
 polars
 pandas
