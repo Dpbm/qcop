@@ -397,11 +397,19 @@ def loss_fn(output: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     """
     Apply a loss function.
 
-    Given that the output and the label are vectors. We can find the distance between them.
+    We find the angle between them and we try to minimize it.
     """
 
-    distance = torch.sqrt(torch.sum((label - output) ** 2))
-    return distance
+    # old version using the distance between vectors
+    # distance = torch.sqrt(torch.sum((label - output) ** 2))
+    label_flatten = torch.flatten(label).to(torch.half)
+    output_flatten = torch.flatten(output).to(torch.half)
+    
+    vec_dot = torch.dot(label_flatten,output_flatten)
+    vec_mul_norm = torch.linalg.vector_norm(label_flatten)*torch.linalg.vector_norm(output_flatten)
+
+    angle = torch.arccos(vec_dot/vec_mul_norm)
+    return angle
 
 
 def train(
