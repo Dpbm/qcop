@@ -17,6 +17,8 @@ from utils.constants import (
     DEFAULT_TEST_PERCENTAGE,
     DEFAULT_TARGET_FOLDER,
     DEFAULT_CHECKPOINT,
+    DEFAULT_EARLY_STOP_PAIENCE,
+    DEFAULT_EARLY_STOP_THRESHOLD
 )
 from utils.datatypes import Dimensions, FilePath
 
@@ -37,6 +39,8 @@ class Arguments:
         "_target_folder",
         "_checkpoint",
         "_new_image_dim",
+        "_es_patience",
+        "_es_threshold"
     ]
 
     def __init__(self):
@@ -54,6 +58,8 @@ class Arguments:
         self._target_folder = DEFAULT_TARGET_FOLDER
         self._checkpoint = DEFAULT_CHECKPOINT
         self._new_image_dim = DEFAULT_NEW_DIM
+        self._es_patience = DEFAULT_EARLY_STOP_PATIENCE
+        self._es_threshold = DEFAULT_EARLY_STOP_THRESHOLD
 
     def parse(self, args: argparse.Namespace):
         """Parse arguments from argparse"""
@@ -69,6 +75,8 @@ class Arguments:
         self._target_folder = args.target_folder
         self._checkpoint = args.checkpoint
         self._new_image_dim = args.new_image_dim
+        self._es_patience = args.es_patience
+        self._es_threshold = args.es_threshold
 
     @property
     def epochs(self) -> int:
@@ -189,6 +197,26 @@ class Arguments:
     def new_image_dim(self, value: Dimensions):
         """Set new_image_dim data"""
         self._new_image_dim = value
+    
+    @property
+    def es_patience(self) -> int:
+        """Get es_patience data"""
+        return self._es_patience  # type: ignore
+
+    @es_patience.setter
+    def es_patience(self, value: int):
+        """Set es_patience data"""
+        self._es_patience = value
+
+    @property
+    def es_threshold(self) -> float:
+        """Get es_threshold data"""
+        return self._es_threshold  # type: ignore
+
+    @es_threshold.setter
+    def es_threshold(self, value: float):
+        """Set es_threshold data"""
+        self._es_threshold = value
 
     def __str__(self) -> str:
         string = f"epochs: {self._epochs}\n"
@@ -202,34 +230,39 @@ class Arguments:
         string += f"amount circuits: {self._amount_circuits}\n"
         string += f"target_folder: {self._target_folder}\n"
         string += f"checkpoint: {self._checkpoint}\n"
-        string += f"new image dim: {self._new_image_dim}\n"
+            string += f"new image dim: {self._new_image_dim}\n"
+            string += f"early stop patience: {self._es_patience}\n"
+            string += f"early stop threshold: {self._es_threshold}\n"
 
-        return string
+            return string
 
 
-def parse_args() -> Arguments:
-    """
-    Use argparse to parse CLI arguments for all scripts
-    """
+    def parse_args() -> Arguments:
+        """
+        Use argparse to parse CLI arguments for all scripts
+        """
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
-    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
-    parser.add_argument("--train-size", type=float, default=DEFAULT_TRAIN_PERCENTAGE)
-    parser.add_argument("--test-size", type=float, default=DEFAULT_TEST_PERCENTAGE)
-    parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT)
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
+        parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+        parser.add_argument("--train-size", type=float, default=DEFAULT_TRAIN_PERCENTAGE)
+        parser.add_argument("--test-size", type=float, default=DEFAULT_TEST_PERCENTAGE)
+        parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT)
 
-    parser.add_argument("--threads", type=int, default=DEFAULT_THREADS)
+        parser.add_argument("--threads", type=int, default=DEFAULT_THREADS)
 
-    parser.add_argument("--shots", type=int, default=DEFAULT_SHOTS)
-    parser.add_argument("--n-qubits", type=int, default=DEFAULT_NUM_QUBITS)
-    parser.add_argument("--max-gates", type=int, default=DEFAULT_MAX_TOTAL_GATES)
+        parser.add_argument("--shots", type=int, default=DEFAULT_SHOTS)
+        parser.add_argument("--n-qubits", type=int, default=DEFAULT_NUM_QUBITS)
+        parser.add_argument("--max-gates", type=int, default=DEFAULT_MAX_TOTAL_GATES)
 
-    parser.add_argument(
-        "--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS
-    )
-    parser.add_argument("--target-folder", type=str, default=DEFAULT_TARGET_FOLDER)
-    parser.add_argument("--new-image-dim", type=int, nargs=2, default=DEFAULT_NEW_DIM)
+        parser.add_argument(
+            "--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS
+        )
+        parser.add_argument("--target-folder", type=str, default=DEFAULT_TARGET_FOLDER)
+        parser.add_argument("--new-image-dim", type=int, nargs=2, default=DEFAULT_NEW_DIM)
+    
+    parser.add_argument("--es-patience", type=int, default=DEFAULT_EARLY_STOP_PATIENCE)
+    parser.add_argument("--es-threshold", type=float, default=DEFAULT_EARLY_STOP_THRESHOLD)
 
     args = parser.parse_args(sys.argv[1:])
 

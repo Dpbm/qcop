@@ -18,14 +18,15 @@ import h5py
 
 from utils.constants import (
     DEBUG,
-    MODEL_FILE_PREFIX,
-    CHECKPOINT_FILE_PREFIX,
     dataset_file,
     images_h5_file,
     ghz_file,
     ghz_pred_file,
     output_plot_file,
     history_file,
+    epoch_tracker_file,
+    checkpoint_file,
+    model_file
 )
 from utils.helpers import debug, PlotImages
 from utils.colors import Colors
@@ -221,10 +222,9 @@ class Model(torch.nn.Module):
         debug(out.shape)
         return out
 
-    def save(self):
+    def save(self, target_folder:FilePath):
         """Save model weights."""
-        path = "%s%s" % (MODEL_FILE_PREFIX, time.ctime())
-        torch.save(self.state_dict(), path)
+        torch.save(self.state_dict(), model_file(target_folder))
 
 
 class Checkpoint:
@@ -265,24 +265,17 @@ class Checkpoint:
         """Get Scheduler parameters"""
         return self._data.get("scheduler")
 
-    @property
-    def epoch(self) -> int:
-        """Get checkpoint epoch"""
-        return self._data.get("epoch") or 0
-
     @staticmethod
     def save(
         folder: FilePath,
-        epoch: int,
         model: StateDict,
         optimizer: StateDict,
         scheduler: StateDict,
     ):
         """Save checkpoint data"""
-        path = os.path.join(folder, "%s%s.pth" % (CHECKPOINT_FILE_PREFIX, time.ctime()))
+        path = checkpoint_file(folder) 
         print("%sSaving checkpoint at: %s...%s" % (Colors.MAGENTABG, path, Colors.ENDC))
         checkpoint = {
-            "epoch": epoch,
             "model": model,
             "optimizer": optimizer,
             "scheduler": scheduler,
@@ -334,7 +327,45 @@ class History:
         with open(self._file_path, "r") as file:
             self._data = json.load(file)
 
+class EpochTracker:
+    """Track the current epoch."""
 
+    def __init__(self, tracker_file:FilePath):
+        self._file = tracker_file
+
+    def load(self) -> int:
+        """Load the text file containing the last epoch."""
+        if(!os.path.exists(self._file)):
+            return 0
+
+        with open(self._file, "r", encoding="utf-8") as tracker:
+            return int(tracker.read().strip())
+
+    def save(self, epoch:int):
+        """Save the text file containing the last epoch."""
+        with open(self._file, "w", encoding="utf-8") as tracker:
+            tracker.write(str(epoch))
+
+class EarlyStop:
+    """Handles Early stopping."""
+    def __init__(self, patience:int, threshold:float):
+        self._patience = patience
+        self._threshold = threshold
+        self._best_loss = float('inf')
+        self._no_improve_counter = 0
+
+    def should_stop(self, loss:float) -> bool:
+        """Check whether the model is improving or not."""
+        if(loss <= self._best_loss-self._threshold):
+            self._best_loss = loss
+            self._no_improve_counter = 0
+            print("%sNew best loss%s"%(Colors.GREENBG, Colors.ENDC))
+            return False
+
+        self._no_improve_counter += 1
+
+        if(self._no_improve_counter >= self._patience):
+            return True
 
 def one_epoch(
     dataset: DataLoader,
@@ -420,6 +451,8 @@ def train(
     test_percentage: float,
     batch_size: int,
     epochs: int,
+    patience:int,
+    es_threshold:float
 ):
     """Train model"""
 
@@ -471,14 +504,19 @@ def train(
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         opt, max_lr=lr, steps_per_epoch=len(data_loader_train), epochs=epochs
     )
-    best_loss = 1_000_000.0
+    best_loss = float('inf')
 
     if checkpoint.optimizer:
         opt.load_state_dict(checkpoint.optimizer)
     if checkpoint.scheduler:
         scheduler.load_state_dict(checkpoint.scheduler)
+    
+    early_stopping = EarlyStop(patience=patience, threshold=threshold)
 
-    for epoch in range(checkpoint.epoch + 1, epochs):
+    epoch_tracker = EpochTracker(epoch_tracker_file(target_folder))
+    last_epoch = epoch_tracker.load()
+
+    for epoch in range(last_epoch + 1, epochs):
         print("%sEpoch: %d%s" % (Colors.YELLOWFG, epoch, Colors.ENDC))
         model.train(True)
 
@@ -521,18 +559,23 @@ def train(
         print("%sAVG loss Test: %f%s" % (Colors.MAGENTAFG, avg_loss, Colors.ENDC))
         print("%sRMSE: %f%s" % (Colors.MAGENTAFG, rmse, Colors.ENDC))
 
+        epoch_tracker.save(epoch)
+
+        if(early_stopping.should_stop(avg_loss)):
+            print("%sStop training early!%s"%(Colors.MAGENTABG,Colors.ENDC))
+            break
+
         if avg_loss < best_loss:
             best_loss = avg_loss
             print("%sBest loss: %f%s" % (Colors.GREENBG, best_loss, Colors.ENDC))
 
-        # save a checkpoint after every epoch
-        Checkpoint.save(
-            target_folder,
-            epoch,
-            model.state_dict(),
-            opt.state_dict(),
-            scheduler.state_dict(),
-        )
+            Checkpoint.save(
+                target_folder,
+                model.state_dict(),
+                opt.state_dict(),
+                scheduler.state_dict(),
+            )
+
 
     eval_loss = 0.0
     targets = []
@@ -633,8 +676,10 @@ def setup_and_run_training(args: Arguments):
         args.test_size,
         args.batch_size,
         args.epochs,
+        args.es_patience,
+        args.es_threshold
     )
-    model.save()  # save best model
+    model.save(args.target_folder)  # save best model
     model.eval()
 
     ghz = torch.load(ghz_file(args.target_folder), map_location=device)

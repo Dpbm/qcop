@@ -1,6 +1,7 @@
 """Constant values"""
 
 import os
+import time
 
 DEBUG = os.environ.get("DEBUG") or False
 
@@ -22,11 +23,15 @@ DEFAULT_NEW_DIM = (500, 500)
 
 DEFAULT_TRAIN_PERCENTAGE = 0.7
 DEFAULT_TEST_PERCENTAGE = 0.2
+# The remaining 0.1 is for Evaluation
 
 DEFAULT_CHECKPOINT = None
 
 MODEL_FILE_PREFIX = "model_"
 CHECKPOINT_FILE_PREFIX = "checkpoint_"
+
+DEFAULT_EARLY_STOP_PATIENCE=5
+DEFAULT_EARLY_STOP_THRESHOLD=0.1
 
 # ruff: noqa: E731
 dataset_path = lambda target_folder: os.path.join(target_folder, "dataset")
@@ -44,3 +49,6 @@ output_plot_file = lambda target_folder: os.path.join(
 images_gen_checkpoint_file = lambda target_folder: os.path.join(
     target_folder, "gen_checkpoint.json"
 )
+epoch_tracker_file = lambda target_folder: os.path.join(target_folder, "epoch.dat")
+checkpoint_file = lambda target_folder: os.path.join(target_folder, "%s%s.pth"%(CHECKPOINT_FILE_PREFIX, time.ctime()))
+model_file = lambda target_folder : os.path.join(target_folder, "%s%s"%(MODEL_FILE_PREFIX, time.ctime()))
