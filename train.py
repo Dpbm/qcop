@@ -350,7 +350,7 @@ class EpochTracker:
 
     def load(self) -> int:
         """Load the text file containing the last epoch."""
-        if(!os.path.exists(self._file)):
+        if(not os.path.exists(self._file)):
             return 0
 
         with open(self._file, "r", encoding="utf-8") as tracker:
@@ -467,7 +467,7 @@ def train(
     batch_size: int,
     epochs: int,
     patience:int,
-    es_threshold:float
+    threshold:float
 ):
     """Train model"""
 
