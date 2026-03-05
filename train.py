@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
+import matplotlib.pyplot as plt
 import polars as pl
 import numpy as np
 import h5py
@@ -326,6 +327,20 @@ class History:
 
         with open(self._file_path, "r") as file:
             self._data = json.load(file)
+
+    def plot(self, output_file:FilePath):
+        """Plot model's evolution."""
+        x = list(range(len(self._data["test"])))
+
+        plt.plot(x=x, y=self._data["test"], label="Average Loss")
+        plt.plot(x=x, y=self._data["rmse"], label="RMSE")
+        plt.xlabel("Epochs")
+        plt.ylabel("")
+        plt.grid()
+        plt.title("Model Metrics Over Epochs")
+        plt.savefig(output_file, bbox_inches="tight")
+        plt.close()
+
 
 class EpochTracker:
     """Track the current epoch."""
