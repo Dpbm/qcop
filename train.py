@@ -19,8 +19,7 @@ import h5py
 
 from utils.constants import (
     DEBUG,
-    dataset_file,
-    images_h5_file,
+    dataset_file, images_h5_file,
     ghz_file,
     ghz_pred_file,
     output_plot_file,

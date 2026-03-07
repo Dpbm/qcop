@@ -17,6 +17,7 @@ from dataset import (
     remove_duplicated_files,
     transform_images,
     start_df,
+    shuffle_csv,
     Checkpoint,
     Stages,
 )
@@ -42,6 +43,7 @@ default_args = {
 GEN_IMAGES_TASK_ID = "gen_images"
 REMOVE_DUPLICATES_TASK_ID = "remove_duplicates"
 TRANSFORM_TASK_ID = "transform_images"
+SHUFFLE_DATASET_ID = "shuffle_df"
 
 
 def next_step(checkpoint: Checkpoint) -> str:
@@ -54,6 +56,9 @@ def next_step(checkpoint: Checkpoint) -> str:
 
     if checkpoint.stage == Stages.GEN_IMAGES:
         return GEN_IMAGES_TASK_ID
+
+    if checkpoint.stage == Stages.SHUFFLE:
+        return SHUFFLE_DATASET_ID
 
     if checkpoint.stage == Stages.DUPLICATES:
         return REMOVE_DUPLICATES_TASK_ID
@@ -131,14 +136,35 @@ with DAG(
     Qiskit framework.
     """
 
-    transtion_gen_to_remove = PythonOperator(
-        task_id="gen_to_remove",
+    transtion_gen_to_shuffle = PythonOperator(
+        task_id="gen_to_shuffle",
+        python_callable=update_checkpoint,
+        op_args=[checkpoint, Stages.SHUFFLE],
+    )
+
+    transtion_gen_to_shuffle.doc_md = """
+    Update checkpoint to start shuffling rows.
+    """
+
+    shuffle = PythonOperator(
+        task_id=SHUFFLE_DATASET_ID,
+        python_callable=shuffle_csv,
+        op_args=[folder],
+        trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
+    )
+
+    shuffle.doc_md = """
+    Shuffle dataset rows.
+    """
+    
+    transtion_shuffle_to_remove = PythonOperator(
+        task_id="shuffle_to_remove",
         python_callable=update_checkpoint,
         op_args=[checkpoint, Stages.DUPLICATES],
     )
 
-    transtion_gen_to_remove.doc_md = """
-    Update checkpoint to start removing duplicated files.
+    transtion_shuffle_to_remove.doc_md = """
+    Update checkpoint to start deleting duplicated rows.
     """
 
     remove_duplicates = PythonOperator(
@@ -228,11 +254,14 @@ with DAG(
     gen_df >> branch_checkpoint
 
     branch_checkpoint >> gen_images
+    branch_checkpoint >> shuffle
     branch_checkpoint >> remove_duplicates
     branch_checkpoint >> transform_img
 
-    gen_images >> transtion_gen_to_remove
-    transtion_gen_to_remove >> remove_duplicates
+    gen_images >> transtion_gen_to_shuffle
+    transtion_gen_to_shuffle >> shuffle
+    shuffle >> transtion_shuffle_to_remove
+    transtion_shuffle_to_remove >> remove_duplicates
     remove_duplicates >> transition_remove_to_transform
     transition_remove_to_transform >> transform_img
     transform_img >> reset_checkpoint

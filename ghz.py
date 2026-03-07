@@ -6,7 +6,7 @@ import torch
 
 from utils.image import transform_image
 from args.parser import parse_args
-from utils.constants import ghz_image_file, ghz_file
+from utils.constants import ghz_image_file, ghz_file, SCALE_CIRCUIT_SIZE
 from utils.datatypes import FilePath, Dimensions
 
 
@@ -20,13 +20,12 @@ def gen_circuit(n_qubits: int, target_folder: FilePath, new_dim: Dimensions):
     qc.measure_all()
 
     ghz_image_path = ghz_image_file(target_folder)
-    qc.draw("mpl", filename=ghz_image_path)
+    qc.draw("mpl", filename=ghz_image_path, fold=-1, scale=SCALE_CIRCUIT_SIZE)
 
     with Image.open(ghz_image_path) as file:
         width, height = new_dim
-        tensor = transform_image(file, width, height)
+        tensor = transform_image(file, width)
         torch.save(tensor, ghz_file(target_folder))
-
 
 if __name__ == "__main__":
     args = parse_args()

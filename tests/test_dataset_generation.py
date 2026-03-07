@@ -11,6 +11,7 @@ from dataset import (
     save_df,
     start_df,
     get_duplicated_files_list_by_diff,
+    shuffle_df
 )
 from utils.datatypes import df_schema
 
@@ -232,6 +233,15 @@ class TestDatasetClean:
 
         assert os.path.exists(tmp_df)
         assert len(pl.read_csv(tmp_df)) == 8
+
+    def test_shuffle_df(self,base_df):
+        df = pl.read_csv(base_df)
+        no_shuffled = df["file"].to_list()
+        shuffled = shuffle_df(df)["file"].to_list()
+        print(no_shuffled, shuffled)
+
+        assert no_shuffled != shuffled
+        
 
     # SINCE SAVING A LAZY FRAME AS CSV IN THE SAME FILE IS NOT STABLE,
     # WE GONNA IGNORE THE TESTS BELLOW. FOR THE PRODUCTION CODE, WE GONNA

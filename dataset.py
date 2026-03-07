@@ -31,6 +31,7 @@ from utils.constants import (
     images_h5_file,
     images_gen_checkpoint_file,
     dataset_file_tmp,
+    SCALE_CIRCUIT_SIZE
 )
 from utils.datatypes import FilePath, df_schema, Dimensions
 from utils.image import transform_image
@@ -49,6 +50,7 @@ class Stages(Enum):
     """Enum for dataset generation stages"""
 
     GEN_IMAGES = "gen"
+    SHUFFLE = "shuffle"
     DUPLICATES = "duplicates"
     TRANSFORM = "transform"
 
@@ -200,7 +202,7 @@ def generate_circuit_images(
         qc_copy.add_register(classical_register)
         qc_copy.measure(measurement, list(range(total_measurements)))
 
-        drawing = qc_copy.draw("mpl", filename=image_path)
+        drawing = qc_copy.draw("mpl", filename=image_path, fold=-1, scale=SCALE_CIRCUIT_SIZE)
         plt.close(drawing)
         del drawing
 
@@ -405,6 +407,22 @@ def get_duplicated_files_list_by_diff(
 
     return duplicated_files.to_list()  # type: ignore
 
+def shuffle_df(df:pl.DataFrame) -> pl.DataFrame:
+    """
+    Shffle DF rows to ensure no sequential logic is kept.
+    """
+    return df.sample(fraction=1.0, shuffle=True, seed=32)
+
+
+def shuffle_csv(target_folder:FilePath):
+    """
+    Shffle CSV rows.
+    """
+    print("%sShuffling DF....%s"%(Colors.GREENBG,Colors.ENDC))
+    file_path = dataset_file(target_folder)
+    df = pl.read_csv(file_path)
+    df = shuffle_df(df)
+    df.write_csv(file_path)
 
 def transform_images(
     target_folder: FilePath, new_dim: Dimensions, checkpoint: Checkpoint
@@ -434,7 +452,7 @@ def transform_images(
         with h5py.File(images_h5_file(target_folder), "a") as file:
             for image_path in tqdm(collected_rows):
                 with Image.open(image_path) as img:
-                    tensor = transform_image(img, max_width, max_height)
+                    tensor = transform_image(img, max_width)
                     file.create_dataset(f"{image_i}", data=tensor)
 
                 image_i += 1
@@ -522,8 +540,15 @@ def main(args: Arguments):
         checkpoint.stage = Stages.DUPLICATES
         checkpoint.index = 0
 
+    if checkpoint.stage == Stages.SHUFFLE:
+        shuffle_df()
+
+        checkpoint.stage = Stages.DUPLICATES
+        checkpoint.index = 0
+
     if checkpoint.stage == Stages.DUPLICATES:
         remove_duplicated_files(args.target_folder, checkpoint)
+
         checkpoint.stage = Stages.TRANSFORM
         checkpoint.index = 0
 

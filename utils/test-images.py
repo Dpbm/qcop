@@ -10,8 +10,7 @@ if __name__ == "__main__":
 
     parser.add_argument("image", type=str)
     parser.add_argument("width", type=int)
-    parser.add_argument("height", type=int)
 
     args = parser.parse_args(sys.argv[1:])
 
-    look_transformation(args.image, args.width, args.height)
+    look_transformation(args.image, args.width)

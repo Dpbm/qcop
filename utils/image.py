@@ -1,75 +1,59 @@
 """Transform PIL images into torch tensors"""
 
 from typing import List, Callable
-from enum import Enum
 
 import torch
 from torchvision.transforms import v2
 from PIL import Image
 
-
-class TransformationLevel(Enum):
-    """
-    All the levels you can use
-    for image transformation pipeline.
-    It's useful for testing.
-    """
-
-    ALL = 5
-    ONE = 1
-    TWO = 2
-    THREE = 3
-    FOUR = 4
-
-
-def get_transformations_pipeline(
-    width: int, height: int, level: TransformationLevel
-) -> List[Callable]:
-    """
-    Returns a transformation pipeline
-    based on the level.
-    """
+def get_transformations_pipeline() -> List[Callable]:
+    """Returns a transformation pipeline."""
 
     transformations = [
-        v2.Resize((width, height), interpolation=Image.LANCZOS),
+        v2.Grayscale(),
         v2.PILToTensor(),
-        v2.CenterCrop(size=(height - 90, width - 20)),
-        v2.JPEG((10, 70)),
+        v2.RandomAutocontrast(p=1),
+        v2.RandomAdjustSharpness(sharpness_factor=4, p=1),
         v2.ToDtype(torch.float16, scale=True),
     ]
 
-    return transformations[: level.value]
+    return transformations
 
 
 def transform_image(
     img: Image,
     width: int,
-    height: int,
-    transform_level: TransformationLevel = TransformationLevel.ALL,
 ) -> torch.Tensor:
-    """Transform and normalize a PIL image into a torch tensor ranging values from 0 to 1"""
+    """
+    Transform and normalize a PIL image into a torch tensor ranging values from 0 to 1.
+    
+    The height won't change in any manner.
+    """
+
     img = img.convert("RGB")
+    image_tensor = v2.Compose(get_transformations_pipeline())(img) / 255.0
+    d, height, out_width = image_tensor.shape[0], image_tensor.shape[1], image_tensor.shape[2]
+    
+    # pad the image to reach the desired width
+    pad = torch.full((d,height,abs(width-out_width)), image_tensor.max(), dtype=torch.float16, device=image_tensor.device)
+    image_tensor = torch.cat([image_tensor, pad], dim=2)
 
-    image_tensor = v2.Compose(
-        get_transformations_pipeline(width, height, transform_level)
-    )(img)
-
-    # by default the returning tensor dtype is torch.float32
-    # but using TransformationLevel.ALL, it's remapped ot float16
-    return image_tensor / 255.0
+    return image_tensor
 
 
-def look_transformation(img_path: str, width: int, height: int):
+def look_transformation(img_path: str, width: int):
     """Test multiple sizes for images"""
 
     import matplotlib.pyplot as plt
+    import sys
 
     with Image.open(img_path) as img:
         img = Image.open(img_path)
-        transformed_img = transform_image(img, width, height)
+        print(f"Input size: {img.size}")
 
-        for i in range(3):
-            ax = plt.subplot(1, 3, i + 1)
-            ax.imshow(transformed_img[i])
+        transformed_img = transform_image(img, width)[0]
+        print(f"Size: {sys.getsizeof(transformed_img)/2**10:.2f} Kb")
+        print(f"Dimensions: {transformed_img.shape}")
 
+        plt.imshow(transformed_img, cmap="gray")
         plt.show()
