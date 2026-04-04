@@ -24,7 +24,7 @@ def gen_circuit(n_qubits: int, target_folder: FilePath, new_dim: Dimensions):
 
     with Image.open(ghz_image_path) as file:
         width, height = new_dim
-        tensor = transform_image(file, width)
+        tensor = transform_image(file, width, height)
         torch.save(tensor, ghz_file(target_folder))
 
 if __name__ == "__main__":

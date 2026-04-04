@@ -156,7 +156,7 @@ class CircuitResult(TypedDict):
 
 
 def get_circuit_results(qc: QuantumCircuit, sampler: Sampler, shots: int) -> Dist:
-    """Execute cirucit on sampler. Returns its quasi dist"""
+    """Execute circuit on sampler. Returns its quasi dist"""
     return sampler.run([qc], shots=shots).result().quasi_dists[0]  # type: ignore
 
 
@@ -194,11 +194,11 @@ def generate_circuit_images(
 
     for index, measurement in enumerate(measurements):
         image_index = base_index + index
-        image_path = os.path.join(base_image_path, "%d.png" % (image_index))
+        image_path = os.path.join(base_image_path, "%d.png" % image_index)
 
         qc_copy = qc.copy()
         total_measurements = len(measurement)
-        classical_register = ClassicalRegister(total_measurements)
+        classical_register = ClassicalRegister(total_measurements, name="c")
         qc_copy.add_register(classical_register)
         qc_copy.measure(measurement, list(range(total_measurements)))
 
@@ -282,7 +282,7 @@ def generate_images(
         while index < amount_circuits:
             args = []
 
-            for i in range(total_threads):
+            for _ in range(total_threads):
                 base_index = index * total_measurement_combs
                 args.append(
                     (
@@ -409,14 +409,14 @@ def get_duplicated_files_list_by_diff(
 
 def shuffle_df(df:pl.DataFrame) -> pl.DataFrame:
     """
-    Shffle DF rows to ensure no sequential logic is kept.
+    Shuffle DF rows to ensure no sequential logic is kept.
     """
     return df.sample(fraction=1.0, shuffle=True, seed=32)
 
 
 def shuffle_csv(target_folder:FilePath):
     """
-    Shffle CSV rows.
+    Shuffle CSV rows.
     """
     print("%sShuffling DF....%s"%(Colors.GREENBG,Colors.ENDC))
     file_path = dataset_file(target_folder)
@@ -452,7 +452,7 @@ def transform_images(
         with h5py.File(images_h5_file(target_folder), "a") as file:
             for image_path in tqdm(collected_rows):
                 with Image.open(image_path) as img:
-                    tensor = transform_image(img, max_width)
+                    tensor = transform_image(img, max_width, max_height)
                     file.create_dataset(f"{image_i}", data=tensor)
 
                 image_i += 1
@@ -483,7 +483,7 @@ def save_df(df: pl.LazyFrame, file_path: FilePath):
     Save dataset as csv.
 
     Even though it's not a good idea to open a csv file using
-    scan_csv and then save using sink_csv, it works for some cases
+    scan_csv and then save using sink_csv, it works for some cases,
     and I'll let it here for now.
     """
     df.sink_csv(file_path)
@@ -521,9 +521,7 @@ def main(args: Arguments):
     """generate, clean and save dataset and images"""
 
     crate_dataset_folder(dataset_file(args.target_folder))
-
     start_df(args.target_folder)
-
     checkpoint = Checkpoint(images_gen_checkpoint_file(args.target_folder))
 
     if checkpoint.stage == Stages.GEN_IMAGES:
@@ -536,19 +534,16 @@ def main(args: Arguments):
             args.threads,
             checkpoint,
         )
-
         checkpoint.stage = Stages.DUPLICATES
         checkpoint.index = 0
 
     if checkpoint.stage == Stages.SHUFFLE:
-        shuffle_df()
-
+        shuffle_csv(args.target_folder)
         checkpoint.stage = Stages.DUPLICATES
         checkpoint.index = 0
 
     if checkpoint.stage == Stages.DUPLICATES:
         remove_duplicated_files(args.target_folder, checkpoint)
-
         checkpoint.stage = Stages.TRANSFORM
         checkpoint.index = 0
 

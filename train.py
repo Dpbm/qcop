@@ -36,10 +36,11 @@ from args.parser import parse_args, Arguments
 StateDict = OrderedDict
 Device = str
 Channels = int
+Batch = Tuple[torch.Tensor, torch.Tensor]
 
 
 class CheckpointData(TypedDict):
-    """Data holded inside a Checkpoint"""
+    """Data held inside a Checkpoint"""
 
     epoch: int
     model: StateDict
@@ -48,7 +49,7 @@ class CheckpointData(TypedDict):
 
 
 class HistoryData(TypedDict):
-    """Data holded inside a History object"""
+    """Data held inside a History object"""
 
     test: List[float]
     rmse: List[float]
@@ -76,14 +77,14 @@ class ImagesDataset(Dataset):
         return self._total_images
 
     def _to_tensor(self, loaded_file: np.array) -> torch.Tensor:
-        """auxiliary method to map an np.array to tensor in the correct device and data type"""
+        """auxiliary method to map a np.array to tensor in the correct device and data type"""
 
         data = loaded_file.astype(np.float32)
         # data = np.moveaxis(data, -1, 0) # only if the image has 3 channels per pixel instead of 3 distinct channels
         return torch.from_numpy(data).to(self._device)
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Get an especific value inside the dataset with its label"""
+    def __getitem__(self, index: int) -> Batch:
+        """Get a specific value inside the dataset with its label"""
         shifted_index = index + self._pivot
         input_data = self._to_tensor(self._obj[f"{shifted_index}"][()])
 
@@ -156,12 +157,12 @@ class Model(torch.nn.Module):
     def __init__(self):
         super(Model, self).__init__()
 
-        self.conv1 = nn.Conv2d(3, 64, 7, stride=2)
+        self.conv1 = nn.Conv2d(1, 64, 3, stride=2)
         self.pool1 = nn.MaxPool2d(2, stride=2)
         self.pool2 = nn.AvgPool2d(3, stride=2)
 
-        self.out_neurons = 512 * 6 * 7
-        self.fc1 = nn.Linear(self.out_neurons, 32)
+        self.fc1 = nn.LazyLinear(32)
+        self.gap = nn.AdaptiveAvgPool2d((1,1))
 
         self.blocks = nn.ModuleList(
             [
@@ -199,26 +200,27 @@ class Model(torch.nn.Module):
         debug("Input Data: %s" % (str(image.shape)))
         PlotImages.plot_filters(image, title="Input Image")
 
-        image = F.relu(self.conv1(image))
-        image = self.pool1(image)
-
+        image = self.pool1(F.relu(self.conv1(image)))
         debug(image.shape)
 
         for i, layer in enumerate(self.blocks):
             image = layer(image)
-
             PlotImages.plot_filters(image, title="Conv%d" % (i + 1))
-
             debug(image.shape)
 
         image = self.pool2(image)
         debug(image.shape)
 
-        image = image.view(image.shape[0], self.out_neurons)
+        image = self.gap(image)
         debug(image.shape)
 
-        out = self.fc1(image)
-        out = F.softmax(out, dim=1)
+        #image = image.view(image.shape[0], self.out_neurons)
+        #debug(image.shape)
+
+        image = torch.flatten(image,1)
+        debug(image.shape)
+
+        out = F.normalize(self.fc1(image), dim=1) # for amplitudes
         debug(out.shape)
         return out
 
@@ -284,7 +286,7 @@ class Checkpoint:
 
 
 class History:
-    """Class in charge for saving the progress of training the model"""
+    """Class in charge of saving the progress of training the model"""
 
     def __init__(self, history_file: FilePath):
         self._data: HistoryData = {"test": [], "rmse": []}
@@ -349,7 +351,7 @@ class EpochTracker:
 
     def load(self) -> int:
         """Load the text file containing the last epoch."""
-        if(not os.path.exists(self._file)):
+        if not os.path.exists(self._file):
             return 0
 
         with open(self._file, "r", encoding="utf-8") as tracker:
@@ -394,19 +396,19 @@ def one_epoch(
     last_loss = 0.0
 
     for i, data in enumerate(dataset):
-        image, label = data
+        images_batch, labels_batch = data
 
         opt.zero_grad()
 
-        output = torch.round(model(image), decimals=3)
+        output_batch = torch.round(model(images_batch), decimals=3)
 
         if DEBUG:
-            print("%smodel output: %s%s" % (Colors.YELLOWFG, str(output), Colors.ENDC))
+            print("%smodel output: %s%s" % (Colors.YELLOWFG, str(output_batch), Colors.ENDC))
 
         # loss = loss_fn(
         #     output.log(), label
         # )  # the loss function requires our data to be in log format
-        loss = loss_fn(output, label)
+        loss = loss_fn(output_batch, labels_batch)
 
         loss.backward()
 
@@ -442,19 +444,35 @@ def loss_fn(output: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     """
     Apply a loss function.
 
-    We find the angle between them and we try to minimize it.
+    We find the angle between them, and we try to minimize it.
     """
 
-    # old version using the distance between vectors
-    # distance = torch.sqrt(torch.sum((label - output) ** 2))
-    label_flatten = torch.flatten(label).to(torch.half)
-    output_flatten = torch.flatten(output).to(torch.half)
-    
-    vec_dot = torch.dot(label_flatten,output_flatten)
-    vec_mul_norm = torch.linalg.vector_norm(label_flatten)*torch.linalg.vector_norm(output_flatten)
+    label_bra = label.to(torch.half)
+    output_ket = output.to(torch.half)
+    fidelity = torch.sum((label_bra * output_ket), dim=1).abs() **2
 
-    angle = torch.arccos(vec_dot/vec_mul_norm)
-    return angle
+    return 1-fidelity.mean()
+
+def custom_collate_fn(batch:Batch) -> Batch:
+    """Bypass the collate function for DatasetLoader."""
+    images = [d[0] for d in batch]
+    target = [d[1] for d in batch]
+
+    max_w = max([img.shape[-1] for img in images])
+    max_h = max([img.shape[-2] for img in images])
+
+    pad_images = [
+        F.pad(
+            img,
+            (0, abs(max_w-img.shape[-1]), 0, abs(max_h-img.shape[-2])),
+            value=0
+        )
+            for img in images
+    ]
+
+
+    return torch.stack(pad_images), torch.stack(target)
+
 
 
 def train(
@@ -504,9 +522,9 @@ def train(
         device, h5_file, eval_dataset, max_eval, pivot_evaluating_index
     )
 
-    data_loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-    data_loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True)
-    data_loader_eval = DataLoader(eval_data, batch_size=batch_size, shuffle=True)
+    data_loader_train = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_fn)
+    data_loader_test = DataLoader(test_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_fn)
+    data_loader_eval = DataLoader(eval_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_fn)
 
     history = History(history_file(target_folder))
     if checkpoint.was_provided():

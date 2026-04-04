@@ -10,16 +10,11 @@ from qiskit.circuit.library import (
     ZGate,
     XGate,
     HGate,
-    YGate,
     RYGate,
-    RZGate,
-    RXGate,
-    TGate,
-    SGate,
     CXGate,
     CZGate,
+    IGate
 )
-
 
 class Gate(ABC):
     """interface for gates"""
@@ -33,8 +28,8 @@ class Gate(ABC):
 class SingleQubitGate(Gate):
     """Handle single qubit gates"""
 
-    rotation_gates = [RXGate, RZGate, RYGate]
-    simple_gates = [ZGate, XGate, HGate, YGate, TGate, SGate]
+    rotation_gates = [RYGate]
+    simple_gates = [ZGate, XGate, HGate, IGate]
     all_gates = [*rotation_gates, *simple_gates]
 
     @classmethod
@@ -83,7 +78,7 @@ def generate_circuit(n_qubits:int, total_gates:int) -> QuantumCircuit:
     return qc
 
 def generate_circuit_worst_case(n_qubits: int, total_gates: int) -> QuantumCircuit:
-    """Generate the longes circuit as possible"""
+    """Generate the circuit as long as possible"""
     qc = QuantumCircuit(n_qubits)
     
     for _ in range(total_gates):
