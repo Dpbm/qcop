@@ -376,43 +376,6 @@ def remove_duplicated_files(target_folder: FilePath, checkpoint: Checkpoint):
         checkpoint.save()
 
 
-def clean_duplicated_rows_df(df: pl.LazyFrame) -> pl.LazyFrame:
-    """
-    Get a df and clean all the rows that have duplicated
-    filepaths or hashes.
-    """
-
-    # once if we stop at some point the dataset generation,
-    # when we resume it, there's some chance of have another row with the same
-    # file index. The file is overwritten, but another line will be added and
-    # it can raise inconsistency. So before checking distinct hashes, we check
-    # for distinct file paths and set is at the default.
-    clean_df = df.filter(pl.col("file").is_first_distinct())
-    clean_df = clean_df.filter(pl.col("hash").is_first_distinct())
-
-    return clean_df
-
-
-def get_duplicated_files_list_by_diff(
-    df: pl.LazyFrame, clean_df: pl.LazyFrame
-) -> List[str]:
-    """
-    Get the files that are duplicated by applying a df diff.
-    """
-    duplicated_files = (
-        df.join(clean_df, on=df.collect_schema().names(), how="anti")
-        .collect()
-        .get_column("file")
-    )
-
-    return duplicated_files.to_list()  # type: ignore
-
-def shuffle_df(df:pl.DataFrame) -> pl.DataFrame:
-    """
-    Shuffle DF rows to ensure no sequential logic is kept.
-    """
-    return df.sample(fraction=1.0, shuffle=True, seed=32)
-
 
 def shuffle_csv(target_folder:FilePath):
     """
@@ -467,54 +430,9 @@ def crate_dataset_folder(base_folder: FilePath):
     os.makedirs(dataset_path(base_folder), exist_ok=True)
 
 
-def create_df() -> pl.LazyFrame:
-    """returns a Polars LazyFrame based on schema"""
-    return pl.LazyFrame(schema=df_schema)
 
 
-def open_csv(path: FilePath) -> pl.LazyFrame:
-    """opens the CSV file and import it as a LazyFrame"""
-    csv = pl.scan_csv(path)
-    return csv.cast(df_schema)
 
-
-def save_df(df: pl.LazyFrame, file_path: FilePath):
-    """
-    Save dataset as csv.
-
-    Even though it's not a good idea to open a csv file using
-    scan_csv and then save using sink_csv, it works for some cases,
-    and I'll let it here for now.
-    """
-    df.sink_csv(file_path)
-
-
-def append_rows_to_df(file_path: FilePath, rows: Rows):
-    """
-    Use pythons built-in csv library to append rows into a file
-    without loading it into memory directly.
-    """
-
-    with open(file_path, "a") as file:
-        writer = csv.writer(file)
-        writer.writerows(rows)
-
-
-def start_df(filename: FilePath):
-    """
-    generates an empty df and saves it on a csv file.
-
-    It's not a good idea to use the scan_csv+sink_csv, but for
-    an empty lazyFrame it works well.
-    """
-    if os.path.exists(filename):
-        return
-
-    df = create_df()
-    save_df(df, filename)
-
-    del df
-    gc.collect()
 
 
 def main(args: Arguments):

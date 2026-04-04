@@ -3,7 +3,16 @@
 import os
 import time
 
+
+# ------ DEBUGGING ---------
 DEBUG = os.environ.get("DEBUG") or False
+
+
+# ----- RANDOMNESS --------
+DEFAULT_RANDOM_SEED = 32
+
+
+
 
 DEFAULT_EPOCHS = 60
 
