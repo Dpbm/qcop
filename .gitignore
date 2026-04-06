@@ -11,3 +11,4 @@ model_*
 history.json
 data/
 !tests/dataset.csv
+.idea

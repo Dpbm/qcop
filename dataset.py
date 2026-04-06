@@ -338,43 +338,6 @@ def generate_images(
             checkpoint.save()
 
 
-def remove_duplicated_files(target_folder: FilePath, checkpoint: Checkpoint):
-    """Remove images that are duplicated based on its hash"""
-    print("%sRemoving duplicated images%s" % (Colors.GREENBG, Colors.ENDC))
-
-    if not checkpoint.files:  # empty list
-        dataset_file_path = dataset_file(target_folder)
-        dataset_file_path_tmp = dataset_file_tmp(target_folder)
-
-        df = open_csv(dataset_file_path)
-        clean_df = clean_duplicated_rows_df(df)
-        duplicated_files = get_duplicated_files_list_by_diff(df, clean_df)
-
-        checkpoint.files = duplicated_files
-
-        # the combination of scan_csv + sink_csv is not stable. However, we can
-        # get around this issue by using a filter in between and saving in a tmp file
-        save_df(clean_df, dataset_file_path_tmp)
-
-        # delete the old file and rename the tmp one to the correct filename
-        os.remove(dataset_file_path)
-        os.rename(dataset_file_path_tmp, dataset_file_path)
-
-        # you must not delete duplicated_files since it's a piece
-        # of memory that'll be used later
-        del df
-        del clean_df
-        gc.collect()
-
-        checkpoint.save()
-
-    print("%sDeleting duplicated files%s" % (Colors.GREENBG, Colors.ENDC))
-    for file in tqdm(checkpoint.files):
-        os.remove(file)
-
-        checkpoint.files.remove(file)
-        checkpoint.save()
-
 
 
 def shuffle_csv(target_folder:FilePath):
@@ -423,14 +386,6 @@ def transform_images(
                 checkpoint.save()
 
         current_index += amount_of_rows_per_iteration
-
-
-def crate_dataset_folder(base_folder: FilePath):
-    """Create a folder to store images for the dataset"""
-    os.makedirs(dataset_path(base_folder), exist_ok=True)
-
-
-
 
 
 
