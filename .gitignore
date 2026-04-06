@@ -1,7 +1,6 @@
 *.npy
 *.npz
 *.csv
-dataset/
 __pycache__/
 *.h5
 model_*
