@@ -9,13 +9,6 @@ from PIL import Image
 def get_transformations_pipeline() -> List[Callable]:
     """Returns a transformation pipeline."""
 
-    transformations = [
-        v2.Grayscale(),
-        v2.PILToTensor(),
-        v2.RandomAutocontrast(p=1),
-        v2.RandomAdjustSharpness(sharpness_factor=4, p=1),
-        v2.ToDtype(torch.float16, scale=True),
-    ]
 
     return transformations
 
@@ -25,11 +18,6 @@ def transform_image(
     width: int,
     height: int
 ) -> torch.Tensor:
-    """
-    Transform and normalize a PIL image into a torch tensor ranging values from 0 to 1.
-    
-    The height won't change in any manner.
-    """
 
     img = img.convert("RGB")
     image_tensor = v2.Compose(get_transformations_pipeline())(img) / 255.0

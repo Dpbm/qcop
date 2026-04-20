@@ -45,6 +45,7 @@ class DF:
             "file": pl.String,
             "result": pl.String,
             "hash": pl.String,
+            "total_meas": pl.UInt8,
             "measurements": pl.String,
             "img_width": pl.UInt16,
             "img_height": pl.UInt16,
