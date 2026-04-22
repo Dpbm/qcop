@@ -15,6 +15,9 @@ class Files:
         self._dataset_file_path = os.path.join(base_folder, "dataset.csv")
         self._dataset_h5_file_path = os.path.join(base_folder, "images.h5")
         self._checkpoint_path = os.path.join(base_folder, "checkpoint-gen.json")
+        self._ghz_file_path = os.path.join(base_folder, "ghz.pth")
+        self._ghz_image_file_path = os.path.join(base_folder, "ghz.png")
+        self._final_model_path = os.path.join(base_folder, "final_model.safetensors")
 
     @property
     def images_path(self) -> FilePath:
@@ -35,6 +38,21 @@ class Files:
     def checkpoint_path(self) -> FilePath:
         """Dataset generation checkpoint file path"""
         return self._checkpoint_path
+    
+    @property
+    def ghz_image_path(self) -> FilePath:
+        """GHZ image file path"""
+        return self._ghz_image_file_path
+
+    @property
+    def ghz_path(self) -> FilePath:
+        """GHZ file path"""
+        return self._ghz_file_path
+
+    @property
+    def final_model_path(self) -> FilePath:
+        """Final model weights path"""
+        return self._final_model_path
 
     def create_dataset_folder(self):
         """Create the dataset folder."""

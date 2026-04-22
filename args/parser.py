@@ -1,48 +1,50 @@
-"""Parse CLI arguments"""
+    """Parse CLI arguments"""
 
-import sys
-import argparse
-from typing import Optional
+    import sys
+    import argparse
+    from typing import Optional
 
-from utils.constants import (
-    DEFAULT_EPOCHS,
-    DEFAULT_SHOTS,
-    DEFAULT_NUM_QUBITS,
-    DEFAULT_MAX_TOTAL_GATES,
-    DEFAULT_THREADS,
-    DEFAULT_BATCH_SIZE,
-    DEFAULT_AMOUNT_OF_CIRCUITS,
-    DEFAULT_NEW_DIM,
-    DEFAULT_TRAIN_PERCENTAGE,
-    DEFAULT_TEST_PERCENTAGE,
-    DEFAULT_TARGET_FOLDER,
-    DEFAULT_CHECKPOINT,
-    DEFAULT_EARLY_STOP_PATIENCE,
-    DEFAULT_EARLY_STOP_THRESHOLD
-)
-from utils.datatypes import Dimensions, FilePath
+    from utils.constants import (
+        DEFAULT_EPOCHS,
+        DEFAULT_SHOTS,
+        DEFAULT_NUM_QUBITS,
+        DEFAULT_MAX_TOTAL_GATES,
+        DEFAULT_THREADS,
+        DEFAULT_BATCH_SIZE, DEFAULT_AMOUNT_OF_CIRCUITS,
+        DEFAULT_NEW_DIM,
+        DEFAULT_TRAIN_PERCENTAGE,
+        DEFAULT_TEST_PERCENTAGE,
+        DEFAULT_TARGET_FOLDER,
+        DEFAULT_CHECKPOINT,
+        DEFAULT_EARLY_STOP_PATIENCE,
+        DEFAULT_EARLY_STOP_THRESHOLD
+    )
+    from utils.datatypes import Dimensions, FilePath
 
+DEFAULT_DATASET_NAME="dqcop"
+DEFAULT_MODEL_NAME="qcop"
 
 class Arguments:
     """Parsed args types"""
 
     __slots__ = [
-        "_epochs",
-        "_batch_size",
-        "_train_size",
-        "_test_size",
-        "_threads",
-        "_shots",
-        "_n_qubits",
-        "_max_gates",
-        "_amount_circuits",
-        "_target_folder",
-        "_checkpoint",
-        "_new_image_dim",
-        "_es_patience",
-        "_es_threshold",
+            "_epochs",
+            "_batch_size",
+            "_train_size",
+            "_test_size",
+            "_threads",
+            "_shots",
+            "_n_qubits",
+            "_max_gates",
+            "_amount_circuits",
+            "_target_folder",
+            "_checkpoint",
+            "_new_image_dim",
+            "_es_patience",
+            "_es_threshold",
+            "_dataset_name",
+            "_model_name",
     ]
-
     def __init__(self):
         """set default arguments"""
 
@@ -60,6 +62,8 @@ class Arguments:
         self._new_image_dim = DEFAULT_NEW_DIM
         self._es_patience = DEFAULT_EARLY_STOP_PATIENCE
         self._es_threshold = DEFAULT_EARLY_STOP_THRESHOLD
+        self._dataset_name = DEFAULT_DATASET_NAME
+        self._model_name = DEFAULT_MODEL_NAME
 
     def parse(self, args: argparse.Namespace):
         """Parse arguments from argparse"""
@@ -78,6 +82,8 @@ class Arguments:
         self._es_patience = args.es_patience
         self._es_threshold = args.es_threshold
         self._ignore_checkpoint = args.ignore_checkpoint
+        self._dataset_name = args.dataset_name
+        self._model_name = args.model_name
 
     @property
     def epochs(self) -> int:
@@ -219,6 +225,26 @@ class Arguments:
         """Set es_threshold data"""
         self._es_threshold = value
     
+    @property
+    def dataset_name(self) -> str:
+        """Get dataset_name data"""
+        return self._dataset_name  # type: ignore
+
+    @dataset_name.setter
+    def dataset_name(self, value: str):
+        """Set dataset_name data"""
+        self._dataset_name = value
+    
+    @property
+    def model_name(self) -> str:
+        """Get model_name data"""
+        return self._model_name  # type: ignore
+
+    @model_name.setter
+    def model_name(self, value: str):
+        """Set model_name data"""
+        self._model_name = value
+    
 
 def parse_args() -> Arguments:
     """
@@ -231,6 +257,8 @@ def parse_args() -> Arguments:
     parser.add_argument("--train-size", type=float, default=DEFAULT_TRAIN_PERCENTAGE)
     parser.add_argument("--test-size", type=float, default=DEFAULT_TEST_PERCENTAGE)
     parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT)
+    parser.add_argument("--dataset-name", type=str, default=DEFAULT_DATASET_NAME)
+    parser.add_argument("--model-name", type=str, default=DEFAULT_MODEL_NAME)
 
     parser.add_argument("--threads", type=int, default=DEFAULT_THREADS)
 

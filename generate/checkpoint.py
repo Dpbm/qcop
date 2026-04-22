@@ -11,6 +11,7 @@ class Stages(Enum):
     SHUFFLE = "shuffle"
     DUPLICATES = "duplicates"
     TRANSFORM = "transform"
+    EXPORT = "export"
 
 class Checkpoint:
     """Class to handle generate data checkpoints"""
@@ -63,6 +64,9 @@ class Checkpoint:
 
         elif self._stage == Stages.DUPLICATES:
             self._stage = Stages.TRANSFORM
+        
+        elif self._stage == Stages.TRANSFORM:
+            self._stage = Stages.EXPORT
 
         else:
             self._stage = Stages.GEN_IMAGES

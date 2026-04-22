@@ -1,11 +1,16 @@
 """Local pipeline for dataset creation"""
 
+import asyncio
+import os
+
 from args.parser import parse_args, Arguments
 from utils.colors import Colors
 from generate.dataset.dataframe import DF
 from generate.dataset.images import Images, Rows
 from generate.dataset.files import Files
 from generate.checkpoint import Checkpoint, Stages
+from ghz import gen_circuit as gen_ghz_circuit
+from export import KaggleExporter, HuggingFaceExporter
 
 def update_rows_callback(rows:Rows, checkpoint:Checkpoint, df:DF):
     df.append_rows_to_file(rows)
@@ -14,9 +19,11 @@ def update_rows_callback(rows:Rows, checkpoint:Checkpoint, df:DF):
 def transform_images_callback(checkpoint:Checkpoint):
     checkpoint.index += 1
 
-def main(args:Arguments):
+async def main(args:Arguments):
     files_handler = Files(args.targer_folder)
     files_handler.create_dataset_folder()
+
+    gen_ghz_circuit(args.n_qubits, args.taget_folder)
     
     checkpoint = Checkpoint.get_checkpoint(files_handler.checkpoint_path)
 
@@ -58,11 +65,21 @@ def main(args:Arguments):
                 )
         checkpoint.next_stage()
 
+    
+    if checkpoint.stage == Stages.EXPORT:
+        kaggle = KaggleExporter(args.target_folder, dataset_name=args.dataset_name)
+        hf = HuggingFaceExporter(os.getenv("HUGGING_FACE_API_KEY"), args.target_folder, dataset_name=args.dataset_name)
+
+        await asyncio.gather(
+            kaggle.upload_dataset(),
+            hf.upload_dataset()
+        )
+
 
 if __name__ == "__main__":
     try:
         args = parse_args()
-        main(args)
+        asyncio.run(main(args))
     except KeyboardInterrupt:
         exit()
 
