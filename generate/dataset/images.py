@@ -24,13 +24,13 @@ class Images:
         self._folder = folder
 
     def generate_images(
-            self,
-            n_qubits:int,
-            amount_circuits:int,
-            total_gates:int,
-            shots:int,
-            callback:Callable,
-            current_index:int=0,
+        self,
+        n_qubits:int,
+        amount_circuits:int,
+        total_gates:int,
+        shots:int,
+        callback:Callable,
+        current_index:int=0,
     ):
         """Generate the images split into threads."""
 

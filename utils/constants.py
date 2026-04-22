@@ -45,8 +45,9 @@ DEFAULT_EARLY_STOP_THRESHOLD=0.01
 SCALE_CIRCUIT_SIZE = 0.5
 
 # ruff: noqa: E731
-dataset_path = lambda target_folder: os.path.join(target_folder, "dataset")
-dataset_file = lambda target_folder: os.path.join(target_folder, "dataset.csv")
+dataset_images_path = lambda target_folder: os.path.join(target_folder, "dataset")
+dataset_file_path = lambda target_folder: os.path.join(target_folder, "dataset.csv")
+
 dataset_file_tmp = lambda target_folder: os.path.join(target_folder, "dataset-tmp.csv")
 images_h5_file = lambda target_folder: os.path.join(target_folder, "images.h5")
 ghz_file = lambda target_folder: os.path.join(target_folder, "ghz.pth")

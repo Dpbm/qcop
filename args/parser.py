@@ -40,7 +40,7 @@ class Arguments:
         "_checkpoint",
         "_new_image_dim",
         "_es_patience",
-        "_es_threshold"
+        "_es_threshold",
     ]
 
     def __init__(self):
@@ -77,6 +77,7 @@ class Arguments:
         self._new_image_dim = args.new_image_dim
         self._es_patience = args.es_patience
         self._es_threshold = args.es_threshold
+        self._ignore_checkpoint = args.ignore_checkpoint
 
     @property
     def epochs(self) -> int:
@@ -217,25 +218,7 @@ class Arguments:
     def es_threshold(self, value: float):
         """Set es_threshold data"""
         self._es_threshold = value
-
-    def __str__(self) -> str:
-        string = f"epochs: {self._epochs}\n"
-        string += f"batch size: {self._batch_size}\n"
-        string += f"train size: {self._train_size}\n"
-        string += f"teste size: {self._test_size}\n"
-        string += f"threads: {self._threads}\n"
-        string += f"shots: {self._shots}\n"
-        string += f"n qubits: {self._n_qubits}\n"
-        string += f"max gates: {self._max_gates}\n"
-        string += f"amount circuits: {self._amount_circuits}\n"
-        string += f"target_folder: {self._target_folder}\n"
-        string += f"checkpoint: {self._checkpoint}\n"
-        string += f"new image dim: {self._new_image_dim}\n"
-        string += f"early stop patience: {self._es_patience}\n"
-        string += f"early stop threshold: {self._es_threshold}\n"
-
-        return string
-
+    
 
 def parse_args() -> Arguments:
     """

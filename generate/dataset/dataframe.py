@@ -7,6 +7,8 @@ from pathlib import Path
 
 import polars as pl
 
+from generate.dataset.images import Rows
+
 from utils.datatypes import FilePath
 from utils.constants import DEFAULT_RANDOM_SEED
 from utils.classproperty import  ClassProperty
@@ -56,17 +58,28 @@ class DF:
         }
 
     @staticmethod
-    def crete_df_obj() -> pl.LazyFrame:
+    def create_df_obj() -> pl.LazyFrame:
         """Returns a Dataframe object based on schema."""
         return pl.LazyFrame(schema=DF.df_schema)
 
     def lazy_save(self, obj: pl.LazyFrame):
         """Saves the lazy frame object to a csv file."""
-        obj.sink_csv(obj, self._df_path)
+        obj.sink_csv(self._df_path)
+
+    def lazy_save_to_tmp(self, obj:pl.LazyFrame):
+        """Saves the df into a tmp file"""
+        obj.sink_csv(self.df_tmp_path)
+
+    def save_df(self, obj: pl.DataFrame):
+        """Saves dataframe into file."""
+        obj.write_csv(self._df_path)
 
     def create_df_file(self):
         """Create the dataframe file"""
-        obj = DF.crete_df_obj()
+        if self.df_file_exists:
+            return
+
+        obj = DF.create_df_obj()
         self.lazy_save(obj)
 
     def load_lazy_frame(self) -> pl.LazyFrame:
@@ -110,11 +123,4 @@ class DF:
         )
 
         return duplicated_files.to_list()  # type: ignore
-
-
-
-
-
-
-
 
