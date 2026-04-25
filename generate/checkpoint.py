@@ -1,9 +1,12 @@
 """Checkpoint for dataset generation"""
 
+from typing import Optional, List
 from enum import Enum
 import json
+import os
 
-from dataset.files import Files
+from generate.dataset.files import Files
+from utils.datatypes import FilePath
 
 class Stages(Enum):
     """Enum for dataset generation stages"""
@@ -16,23 +19,22 @@ class Stages(Enum):
 class Checkpoint:
     """Class to handle generate data checkpoints"""
 
-    __slots__ = ["_path", "_stage", "_index"]
+    __slots__ = ["_path", "_stage", "_index", "_thread_indexes"]
 
     def __init__(self, path: Optional[FilePath]):
         self._path = path
 
         with open(path, "r") as file:
             data = json.load(file)
-            stage = data.get("stage")
-            self._stage = Stages.GEN_IMAGES if stage is None else Stages(stage)
+            self._stage = Stages(data.get("stage", Stages.GEN_IMAGES.value))
+            self._thread_indexes = data.get("thread_indexes", [])
             self._index = data.get("index", 0)
 
     @classmethod
     def get_checkpoint(cls, path:FilePath):
         if not os.path.exists(path):
-            Checkpoint.create_empty(checkpoint_path)
-
-        return cls(checkpoint_path)
+            Checkpoint.create_empty(path)
+        return cls(path)
 
     @property
     def stage(self) -> Stages:
@@ -53,6 +55,16 @@ class Checkpoint:
     def index(self, value: int):
         """update index"""
         self._index = value
+    
+    @property
+    def thread_indexes(self) -> List[int]:
+        """get thread indexes"""
+        return self._thread_indexes
+
+    @thread_indexes.setter
+    def thread_indexes(self, value: List[int]):
+        """update thread indexes"""
+        self._thread_indexes = value
 
     def next_stage(self):
         """Move state to the new stage"""
@@ -72,6 +84,7 @@ class Checkpoint:
             self._stage = Stages.GEN_IMAGES
 
         self._index = 0
+        self._thread_indexes = []
 
 
     def save(self):
@@ -80,6 +93,7 @@ class Checkpoint:
             data = {
                 "stage": self._stage.value,
                 "index": self._index,
+                "thread_indexes": self._thread_indexes
             }
             json.dump(data, file)
     
@@ -88,8 +102,9 @@ class Checkpoint:
         """Create an empty checkpoint"""
         with open(path, "w") as file:
             data = {
-                "stage": Stages.GEN_IMAGES,
+                "stage": Stages.GEN_IMAGES.value,
                 "index": 0,
+                "thread_indexes": []
             }
             json.dump(data, file)
 

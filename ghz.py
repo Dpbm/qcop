@@ -11,6 +11,7 @@ from utils.constants import SCALE_CIRCUIT_SIZE
 from utils.datatypes import FilePath, Dimensions
 
 from generate.dataset.files import Files
+from generate.dataset.images import Images
 
 def gen_circuit(n_qubits: int, target_folder: FilePath):
     file_handler = Files(target_folder)

@@ -27,7 +27,7 @@ class Exporter(ABC):
     def upload_dataset(self):
         pass
 
-    @abstractmethdo
+    @abstractmethod
     def upload_model(self):
         pass
 

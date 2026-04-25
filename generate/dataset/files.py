@@ -1,5 +1,6 @@
 """Methods for handling dataset files."""
 import os
+import shutil
 from typing import List
 
 from tqdm import tqdm
@@ -13,11 +14,17 @@ class Files:
         self._base_folder = base_folder
         self._dataset_images_path = os.path.join(base_folder, "images")
         self._dataset_file_path = os.path.join(base_folder, "dataset.csv")
+        self._df_tmp_path = os.path.join(base_folder, "tmp-df.csv")
         self._dataset_h5_file_path = os.path.join(base_folder, "images.h5")
         self._checkpoint_path = os.path.join(base_folder, "checkpoint-gen.json")
         self._ghz_file_path = os.path.join(base_folder, "ghz.pth")
         self._ghz_image_file_path = os.path.join(base_folder, "ghz.png")
         self._final_model_path = os.path.join(base_folder, "final_model.safetensors")
+    
+    @property
+    def df_tmp_path(self) -> FilePath:
+        """Returns Temp Dataframe path."""
+        return self._df_tmp_path
 
     @property
     def images_path(self) -> FilePath:
@@ -56,7 +63,7 @@ class Files:
 
     def create_dataset_folder(self):
         """Create the dataset folder."""
-        os.makedirs(self._dataset_images_path, exists_ok=True)
+        os.makedirs(self._dataset_images_path, exist_ok=True)
 
     @staticmethod
     def remove_duplicated_files(files:List[FilePath]):
@@ -67,3 +74,8 @@ class Files:
 
         for file in tqdm(files, desc="Removing file: "):
             os.remove(file)
+
+    def move_tmp_to_definitive(self):
+        """change tmp file name to the definitive dataset"""
+        os.remove(self._dataset_file_path)
+        shutil.move(self._df_tmp_path, self._dataset_file_path)

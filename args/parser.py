@@ -1,25 +1,25 @@
-    """Parse CLI arguments"""
+"""Parse CLI arguments"""
 
-    import sys
-    import argparse
-    from typing import Optional
+import sys
+import argparse
+from typing import Optional
 
-    from utils.constants import (
-        DEFAULT_EPOCHS,
-        DEFAULT_SHOTS,
-        DEFAULT_NUM_QUBITS,
-        DEFAULT_MAX_TOTAL_GATES,
-        DEFAULT_THREADS,
-        DEFAULT_BATCH_SIZE, DEFAULT_AMOUNT_OF_CIRCUITS,
-        DEFAULT_NEW_DIM,
-        DEFAULT_TRAIN_PERCENTAGE,
-        DEFAULT_TEST_PERCENTAGE,
-        DEFAULT_TARGET_FOLDER,
-        DEFAULT_CHECKPOINT,
-        DEFAULT_EARLY_STOP_PATIENCE,
-        DEFAULT_EARLY_STOP_THRESHOLD
-    )
-    from utils.datatypes import Dimensions, FilePath
+from utils.constants import (
+    DEFAULT_EPOCHS,
+    DEFAULT_SHOTS,
+    DEFAULT_NUM_QUBITS,
+    DEFAULT_MAX_TOTAL_GATES,
+    DEFAULT_THREADS,
+    DEFAULT_BATCH_SIZE, DEFAULT_AMOUNT_OF_CIRCUITS,
+    DEFAULT_NEW_DIM,
+    DEFAULT_TRAIN_PERCENTAGE,
+    DEFAULT_TEST_PERCENTAGE,
+    DEFAULT_TARGET_FOLDER,
+    DEFAULT_CHECKPOINT,
+    DEFAULT_EARLY_STOP_PATIENCE,
+    DEFAULT_EARLY_STOP_THRESHOLD
+)
+from utils.datatypes import Dimensions, FilePath
 
 DEFAULT_DATASET_NAME="dqcop"
 DEFAULT_MODEL_NAME="qcop"
@@ -81,7 +81,6 @@ class Arguments:
         self._new_image_dim = args.new_image_dim
         self._es_patience = args.es_patience
         self._es_threshold = args.es_threshold
-        self._ignore_checkpoint = args.ignore_checkpoint
         self._dataset_name = args.dataset_name
         self._model_name = args.model_name
 
@@ -275,8 +274,11 @@ def parse_args() -> Arguments:
     parser.add_argument("--es-patience", type=int, default=DEFAULT_EARLY_STOP_PATIENCE)
     parser.add_argument("--es-threshold", type=float, default=DEFAULT_EARLY_STOP_THRESHOLD)
 
-    args = parser.parse_args(sys.argv[1:])
-
+    if len(sys.argv) <= 2:
+        parser.print_usage()
+        raise SystemExit
+        
+    args = parser.parse_args()
     parsed_arguments = Arguments()
     parsed_arguments.parse(args)
 

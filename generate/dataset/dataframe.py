@@ -7,31 +7,17 @@ from pathlib import Path
 
 import polars as pl
 
-from generate.dataset.images import Rows
-
 from utils.datatypes import FilePath
 from utils.constants import DEFAULT_RANDOM_SEED
 from utils.classproperty import  ClassProperty
-
-Schema = Dict[str, Any]
+from generate.datatypes import *
 
 class DF:
     """A class to hold a dataframe."""
 
     def __init__(self, filepath:FilePath, seed:int=DEFAULT_RANDOM_SEED):
         self._df_path = filepath
-        self._df_tmp_path = os.path.join(Path(filepath).parent, "tmp-df.csv")
         self._seed = seed
-
-    @property
-    def df_tmp_path(self) -> FilePath:
-        """Returns Temp Dataframe path."""
-        return self._df_tmp_path
-
-    @df_tmp_path.setter
-    def df_tmp_path(self, filepath:FilePath):
-        """Set Temp Dataframe path."""
-        self._df_tmp_path = filepath
 
     @property
     def df_file_exists(self) -> bool:
@@ -47,13 +33,14 @@ class DF:
             "file": pl.String,
             "result": pl.String,
             "hash": pl.String,
+            "amount_gates": pl.String,
             "total_meas": pl.UInt8,
             "measurements": pl.String,
             "img_width": pl.UInt16,
             "img_height": pl.UInt16,
             "n_two_qubit_gates": pl.UInt8,
             "n_one_qubit_gates": pl.UInt8,
-            "file_size_bytes": pl.Uint32,
+            "file_size_bytes": pl.UInt32,
             "n_barriers": pl.UInt8,
         }
 
@@ -66,9 +53,9 @@ class DF:
         """Saves the lazy frame object to a csv file."""
         obj.sink_csv(self._df_path)
 
-    def lazy_save_to_tmp(self, obj:pl.LazyFrame):
+    def lazy_save_to_tmp(self, obj:pl.LazyFrame, tmp_path:FilePath):
         """Saves the df into a tmp file"""
-        obj.sink_csv(self.df_tmp_path)
+        obj.sink_csv(tmp_path)
 
     def save_df(self, obj: pl.DataFrame):
         """Saves dataframe into file."""
