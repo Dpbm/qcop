@@ -33,5 +33,8 @@ lock:
 clean-data-folder:
 	sudo rm -rf ./data
 
+run-dataset:
+	python create-dataset.py --target-folder ./data --threads 20
+
 airflow-up:
 	source airflow-setup-test.sh && docker compose down && docker compose build && docker compose up -d

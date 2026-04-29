@@ -86,18 +86,19 @@ class Images:
 
                 with ThreadPoolExecutor(max_workers=total_measurement_combs) as pool:
                     threads = [pool.submit(self._generate_circuit_images, *arg) for arg in args]
-
+                    
+                    rows = []
                     for future in as_completed(threads):
                         try:
-                            rows = future.result(),
+                            future_rows = [list(result.values())  for result in future.result()]
+                            rows = [*rows, *future_rows]
                             current_index += 1
-                            callback(rows)
+                            progress.update(1)
                         except Exception as error:
                             print("Error: %s" % error)
                             sys.exit(1)
-
+                    callback(rows)
                     checkpoint.thread_indexes = [ 0 for _ in range(total_threads) ]
-                    progress.update(current_index)
 
     def _generate_circuit_images(
             self,
@@ -184,7 +185,7 @@ class Images:
                     "n_two_qubit_gates": gates_per_type_count.get(2, 0),
                     "n_one_qubit_gates": gates_per_type_count.get(1, 0),
                     "amount_gates": json.dumps(dict(total_gates_count)),
-                    "file_size_in_bytes": os.path.getsize(img_path),
+                    "file_size_bytes": os.path.getsize(img_path),
                     "n_barriers": barriers_count
                 })
             callback(thread_index, img_index)
