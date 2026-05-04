@@ -13,9 +13,9 @@ from ghz import gen_circuit as gen_ghz_circuit
 from export import KaggleExporter, HuggingFaceExporter
 
 
-def update_rows_callback(rows:Rows, checkpoint:Checkpoint, df:DF):
+def update_rows_callback(rows:Rows, checkpoint:Checkpoint, df:DF, inc: int):
     df.append_rows_to_file(rows)
-    checkpoint.index += 1
+    checkpoint.index += inc
     checkpoint.save()
 
 def transform_images_callback(checkpoint:Checkpoint):
@@ -45,7 +45,7 @@ async def main(args:Arguments):
                 args.amount_circuits, 
                 args.max_gates,
                 args.shots,
-                lambda rows: update_rows_callback(rows, checkpoint, df),
+                lambda rows,inc: update_rows_callback(rows, checkpoint, df, inc),
                 args.threads,
                 checkpoint,
                 current_index=checkpoint.index

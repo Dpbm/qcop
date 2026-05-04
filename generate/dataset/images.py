@@ -97,7 +97,7 @@ class Images:
                         except Exception as error:
                             print("Error: %s" % error)
                             sys.exit(1)
-                    callback(rows)
+                    callback(rows, total_threads)
                     checkpoint.thread_indexes = [ 0 for _ in range(total_threads) ]
 
     def _generate_circuit_images(
