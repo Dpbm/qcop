@@ -66,14 +66,27 @@ class Files:
         os.makedirs(self._dataset_images_path, exist_ok=True)
 
     @staticmethod
-    def remove_duplicated_files(files:List[FilePath]):
-        """Remove images that are duplicated (same hash)."""
+    def remove_duplicated_files(files:List[FilePath]) -> List[FilePath]:
+        """
+        Remove images that are duplicated (same hash).
+
+        Returns:
+            Files that do not exist. -> List[FilePath]
+        """
 
         # We should create a tmp df with the clean data
         # and save it to CSV first, before proceeding.
 
+        dont_exist_files = []
+
         for file in tqdm(files, desc="Removing file: "):
-            os.remove(file)
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                print("[!] File %s doesn't exist"%file)
+                dont_exist_files.append(file)
+        
+        return dont_exist_files
 
     def move_tmp_to_definitive(self):
         """change tmp file name to the definitive dataset"""

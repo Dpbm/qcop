@@ -1,6 +1,7 @@
 """Local pipeline for dataset creation"""
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import os
 
 from args.parser import parse_args, Arguments
@@ -67,13 +68,18 @@ async def main(args:Arguments):
         clean_df = DF.clean_duplicated_rows(lazy_df)
         duplicated_files = DF.get_duplicated_files(lazy_df, clean_df)
         df.lazy_save_to_tmp(clean_df, files_handler.df_tmp_path)
-        Files.remove_duplicated_files(duplicated_files)
-        Files.move_tmp_to_definitive()
+
+        dont_exist = Files.remove_duplicated_files(duplicated_files)
+        clean_df = DF.remove_rows_with_non_existant_files(clean_df, dont_exist)
+        df.lazy_save_to_tmp(clean_df, files_handler.df_tmp_path)
+
+        files_handler.move_tmp_to_definitive()
         checkpoint.next_stage()
         checkpoint.save()
 
     if checkpoint.stage == Stages.TRANSFORM:
         print("[*] Removing duplicated (%d)..." % checkpoint.index)
+        clean_df = df.load_lazy_frame()
         img_handler.transform_images(
                 files_handler.h5_file_path, 
                 clean_df, 
@@ -86,13 +92,16 @@ async def main(args:Arguments):
     
     if checkpoint.stage == Stages.EXPORT:
         print("[*] Exporting...")
-        kaggle = KaggleExporter(args.target_folder, dataset_name=args.dataset_name)
-        hf = HuggingFaceExporter(os.getenv("HUGGINGFACE_API_KEY"), args.target_folder, dataset_name=args.dataset_name)
+        kaggle = KaggleExporter(args.target_folder, dataset_name=args.dataset_name_kaggle)
+        hf = HuggingFaceExporter(os.getenv("HUGGINGFACE_API_KEY"), args.target_folder, dataset_name=args.dataset_name_hf)
 
-        await asyncio.gather(
-            kaggle.upload_dataset(),
-            hf.upload_dataset()
-        )
+        loop = asyncio.get_running_loop()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            kaggle_upload = loop.run_in_executor(pool,kaggle.upload_dataset)
+            hf_upload = loop.run_in_executor(pool,hf.upload_dataset)
+            await asyncio.gather(kaggle_upload, hf_upload)
+
         checkpoint.next_stage()
         checkpoint.save()
 

@@ -3,13 +3,13 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
 from time import ctime
-import asyncio
 from pathlib import Path
 
 import kagglehub as kh
 from huggingface_hub import HfApi
 
 from utils.datatypes import FilePath
+from generate.dataset.files import Files
 
 class Exporter(ABC):
     ignore_patterns_dataset = [
@@ -55,27 +55,27 @@ class KaggleExporter(Exporter):
             "*.pth"
         ]
 
-    async def upload_dataset(self):
+    def upload_dataset(self):
         """Upload dataset to Kaggle"""
         assert self._dataset_name is not None, "You must set a dataset name"
-        await asyncio.create_task(
-                kh.dataset_upload(
-                    self._dataset_name,
-                    self._target_folder,
-                    version_note=ctime(),
-                    ignore_patterns=Exporter.ignore_patterns_dataset
-            ))
+        print("[*] Uploading to Kaggle")
+        kh.dataset_upload(
+            self._dataset_name,
+            self._target_folder,
+            version_notes=ctime(),
+            ignore_patterns=Exporter.ignore_patterns_dataset
+        )
     
-    async def upload_model(self):
+    def upload_model(self):
         """Upload model to Kaggle"""
         assert self._model_name is not None, "You must set a model name"
-        await asyncio.create_task(
-                kh.model_upload(
-                    handle=self._model_name,
-                    local_model_dir=self._target_folder,
-                    version_notes=ctime(),
-                    ignore_patterns=self._ignore_patterns_model
-            ))
+        print("[*] Uploading to Kaggle")
+        kh.model_upload(
+            handle=self._model_name,
+            local_model_dir=self._target_folder,
+            version_notes=ctime(),
+            ignore_patterns=self._ignore_patterns_model
+        )
                 
     
 
@@ -110,25 +110,24 @@ class HuggingFaceExporter(Exporter):
             "*.pth"
         ]
 
-    async def upload_dataset(self):
+    def upload_dataset(self):
         """Upload dataset to HuggingFace"""
         assert self._dataset_name is not None, "You must set a dataset name"
-
-        await asyncio.create_task(
-                self._api.upload_folder(
-                    folder_path=self._target_folder,
-                    repo_id=self._dataset_name,
-                    repo_type="dataset",
-                    ignore_patterns=Exporter.ignore_patterns_dataset
-                ))
+        print("[*] Uploading to Huggingface")
+        self._api.upload_folder(
+            folder_path=self._target_folder,
+            repo_id=self._dataset_name,
+            repo_type="dataset",
+            ignore_patterns=Exporter.ignore_patterns_dataset
+        )
     
-    async def upload_model(self):
+    def upload_model(self):
         """Upload model to Kaggle"""
         assert self._model_name is not None, "You must set a model name"
-        await asyncio.create_task(
-                self._api.upload_file(
-                    path_or_fileobj=self._model_file_path,
-                    path_in_repo=self._model_file,
-                    repo_id=self._model_name,
-                    repo_type="model",
-                ))
+        print("[*] Uploading to Huggingface")
+        self._api.upload_file(
+            path_or_fileobj=self._model_file_path,
+            path_in_repo=self._model_file,
+            repo_id=self._model_name,
+            repo_type="model",
+        )

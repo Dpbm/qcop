@@ -42,8 +42,10 @@ class Arguments:
             "_new_image_dim",
             "_es_patience",
             "_es_threshold",
-            "_dataset_name",
-            "_model_name",
+            "_dataset_name_kaggle",
+            "_dataset_name_hf",
+            "_model_name_kaggle",
+            "_model_name_hf",
     ]
     def __init__(self):
         """set default arguments"""
@@ -62,8 +64,10 @@ class Arguments:
         self._new_image_dim = DEFAULT_NEW_DIM
         self._es_patience = DEFAULT_EARLY_STOP_PATIENCE
         self._es_threshold = DEFAULT_EARLY_STOP_THRESHOLD
-        self._dataset_name = DEFAULT_DATASET_NAME
-        self._model_name = DEFAULT_MODEL_NAME
+        self._dataset_name_kaggle = DEFAULT_DATASET_NAME
+        self._dataset_name_hf = DEFAULT_DATASET_NAME
+        self._model_name_kaggle = DEFAULT_MODEL_NAME
+        self._model_name_hf = DEFAULT_MODEL_NAME
 
     def parse(self, args: argparse.Namespace):
         """Parse arguments from argparse"""
@@ -81,8 +85,10 @@ class Arguments:
         self._new_image_dim = args.new_image_dim
         self._es_patience = args.es_patience
         self._es_threshold = args.es_threshold
-        self._dataset_name = args.dataset_name
-        self._model_name = args.model_name
+        self._dataset_name_kaggle = args.dataset_name_kaggle
+        self._dataset_name_hf = args.dataset_name_hf
+        self._model_name_kaggle = args.model_name_kaggle
+        self._model_name_hf = args.model_name_hf
 
     @property
     def epochs(self) -> int:
@@ -225,24 +231,44 @@ class Arguments:
         self._es_threshold = value
     
     @property
-    def dataset_name(self) -> str:
-        """Get dataset_name data"""
-        return self._dataset_name  # type: ignore
+    def dataset_name_kaggle(self) -> str:
+        """Get dataset_name_kaggle data"""
+        return self._dataset_name_kaggle  # type: ignore
 
-    @dataset_name.setter
-    def dataset_name(self, value: str):
-        """Set dataset_name data"""
-        self._dataset_name = value
+    @dataset_name_kaggle.setter
+    def dataset_name_kaggle(self, value: str):
+        """Set dataset_name_kaggle data"""
+        self._dataset_name_kaggle = value
     
     @property
-    def model_name(self) -> str:
-        """Get model_name data"""
-        return self._model_name  # type: ignore
+    def dataset_name_hf(self) -> str:
+        """Get dataset_name_hf data"""
+        return self._dataset_name_hf  # type: ignore
 
-    @model_name.setter
-    def model_name(self, value: str):
-        """Set model_name data"""
-        self._model_name = value
+    @dataset_name_hf.setter
+    def dataset_name_hf(self, value: str):
+        """Set dataset_name_hf data"""
+        self._dataset_name_hf = value
+    
+    @property
+    def model_name_kaggle(self) -> str:
+        """Get model_name_kaggle data"""
+        return self._model_name_kaggle  # type: ignore
+
+    @model_name_kaggle.setter
+    def model_name_kaggle(self, value: str):
+        """Set model_name_kaggle data"""
+        self._model_name_kaggle = value
+    
+    @property
+    def model_name_hf(self) -> str:
+        """Get model_name_hf data"""
+        return self._model_name_hf  # type: ignore
+
+    @model_name_hf.setter
+    def model_name_hf(self, value: str):
+        """Set model_name_hf data"""
+        self._model_name_hf = value
     
 
 def parse_args() -> Arguments:
@@ -256,8 +282,10 @@ def parse_args() -> Arguments:
     parser.add_argument("--train-size", type=float, default=DEFAULT_TRAIN_PERCENTAGE)
     parser.add_argument("--test-size", type=float, default=DEFAULT_TEST_PERCENTAGE)
     parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT)
-    parser.add_argument("--dataset-name", type=str, default=DEFAULT_DATASET_NAME)
-    parser.add_argument("--model-name", type=str, default=DEFAULT_MODEL_NAME)
+    parser.add_argument("--dataset-name-kaggle", type=str, default=DEFAULT_DATASET_NAME)
+    parser.add_argument("--dataset-name-hf", type=str, default=DEFAULT_DATASET_NAME)
+    parser.add_argument("--model-name-kaggle", type=str, default=DEFAULT_MODEL_NAME)
+    parser.add_argument("--model-name-hf", type=str, default=DEFAULT_MODEL_NAME)
 
     parser.add_argument("--threads", type=int, default=DEFAULT_THREADS)
 

@@ -34,7 +34,7 @@ clean-data-folder:
 	sudo rm -rf ./data
 
 run-dataset:
-	python create-dataset.py --target-folder ./data --threads 20
+	python create-dataset.py --target-folder ./data --threads 20 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
 
 airflow-up:
 	source airflow-setup-test.sh && docker compose down && docker compose build && docker compose up -d

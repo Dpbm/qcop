@@ -104,10 +104,16 @@ class DF:
     def get_duplicated_files(df:pl.LazyFrame, clean:pl.LazyFrame) -> List[str]:
         """Get the files that are duplicated by applying a df diff."""
         duplicated_files = (
-            df.join(clean_df, on=df.collect_schema().names(), how="anti")
+            df.join(clean, on=df.collect_schema().names(), how="anti")
             .collect()
             .get_column("file")
         )
 
         return duplicated_files.to_list()  # type: ignore
+
+    @staticmethod
+    def remove_rows_with_non_existant_files(df:pl.LazyFrame, files:List[FilePath]):
+        """Remove the rows with invalid files."""
+        print("[*] Removing %d files from dataset" % len(files))
+        return df.filter(~pl.col("file").is_in(files))
 

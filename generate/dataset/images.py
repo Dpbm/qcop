@@ -70,7 +70,7 @@ class Images:
                     args.append(
                         (
                             i,
-                            current_index + i * total_measurement_combs,
+                            (current_index + i) * total_measurement_combs,
                             measurement_combs,
                             n_qubits,
                             total_gates,
@@ -216,8 +216,8 @@ class Images:
             with h5py.File(h5_file_path, "a") as file:
                 for image_path in tqdm(collected_rows):
                     with Image.open(image_path) as img:
-                        tensor = Images.transform_image(img, max_width, max_height)
-                        file.create_dataset(f"{image_i}", data=tensor)
+                        tensor = Images._transform_image(img)
+                        file.create_dataset(f"{current_index}", data=tensor)
                         callback()
                         current_index += 1
 
