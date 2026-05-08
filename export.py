@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List
 from time import ctime
 from pathlib import Path
+import os
 
 import kagglehub as kh
 from huggingface_hub import HfApi
@@ -113,6 +114,7 @@ class HuggingFaceExporter(Exporter):
     def upload_dataset(self):
         """Upload dataset to HuggingFace"""
         assert self._dataset_name is not None, "You must set a dataset name"
+        os.environ["HF_HOME"] = "/tmp/huggingface"
         print("[*] Uploading to Huggingface")
         self._api.upload_folder(
             folder_path=self._target_folder,
@@ -124,6 +126,7 @@ class HuggingFaceExporter(Exporter):
     def upload_model(self):
         """Upload model to Kaggle"""
         assert self._model_name is not None, "You must set a model name"
+        os.environ["HF_HOME"] = "/tmp/huggingface"
         print("[*] Uploading to Huggingface")
         self._api.upload_file(
             path_or_fileobj=self._model_file_path,
