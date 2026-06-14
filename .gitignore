@@ -12,3 +12,4 @@ history.json
 data/
 !tests/dataset.csv
 .idea
+.ipynb_checkpoints/
