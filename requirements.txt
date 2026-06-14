@@ -18,3 +18,4 @@ psycopg2-binary
 kagglehub
 huggingface_hub
 lark
+cupy-cuda12x
