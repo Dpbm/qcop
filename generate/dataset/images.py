@@ -10,9 +10,10 @@ import json
 import hashlib
 
 import torch
-from torchvision.transforms import v2
 from PIL import Image
 import polars as pl
+import cupy as cp
+import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib
@@ -29,6 +30,43 @@ from generate.random_circuit import get_random_circuit
 from generate.checkpoint import Checkpoint
 
 STEP_FOR_SAVE_CHECKPOINT = 10
+N_THREADS = 1024
+kernel = r"""
+extern "C"{
+    __global__ void dtw2_borders(
+                    const unsigned int* input,
+                    unsigned char* out,
+                    unsigned int quadrant_width,
+                    unsigned int img_width,
+                    unsigned int max_pixels_quadrant,
+                    unsigned int max_pixels_image
+    ){
+        unsigned int global_index = (blockIdx.x * blockDim.x) + threadIdx.x;
+        if(global_index >= max_pixels_quadrant)
+            return;
+
+        unsigned int width_index = global_index % quadrant_width;
+        unsigned int height_index = global_index / quadrant_width;
+
+        unsigned int original_img_w_index = width_index * 2;
+        unsigned int original_img_h_index = height_index * 2;
+
+        unsigned int curr_input_index = (original_img_h_index * img_width) + original_img_w_index;
+        unsigned int curr_input_index_row = ((original_img_h_index+1) * img_width) + original_img_w_index;
+
+        float current_pixel  = curr_input_index >= max_pixels_image ? 1.0 : input[curr_input_index];
+        float next_col_pixel = (curr_input_index+1) >= max_pixels_image ? 1.0 : input[curr_input_index+1];
+        float next_row_pixel = curr_input_index_row >= max_pixels_image ? 1.0 : input[curr_input_index_row];
+        float diag_pixel     = (curr_input_index_row+1) >= max_pixels_image ? 1.0 : input[curr_input_index_row+1];
+
+        float B_val = 0.5 * (current_pixel - next_col_pixel + next_row_pixel - diag_pixel);
+        float C_val = 0.5 * (current_pixel + next_col_pixel - next_row_pixel - diag_pixel);
+        float sum = abs(B_val + C_val);
+
+        out[(height_index * quadrant_width) + width_index] = (unsigned char) (sum > 0.5 ? 1 : 0);
+    }
+};
+"""
 
 def update_index_callback(thread_index:int, img_index:int, checkpoint:Checkpoint):
     """Updated thread indexes and save checkpoint when necessary"""
@@ -250,13 +288,19 @@ class Images:
         Transform and normalize a PIL image into a torch tensor ranging values from 0 to 1.
         """
 
-        img = img.convert("RGB")
-        pipeline = [
-            v2.Grayscale(),
-            v2.PILToTensor(),
-            v2.RandomAutocontrast(p=1),
-            v2.RandomAdjustSharpness(sharpness_factor=4, p=1),
-            v2.ToDtype(torch.float16, scale=True),
-        ]
-        return v2.Compose(pipeline)(img) / 255.0
+        img = img.convert("L")
+
+        width,height = img.size
+        quadrant_w, quadrant_h = int(np.ceil(width/2)), int(np.ceil(height/2))
+
+        dtw2 = cp.RawKernel(kernel, "dtw2_borders")        
+
+        gpu_img = cp.asarray(img,dtype=cp.uint32)
+        out = cp.zeros((quadrant_h, quadrant_w), dtype=cp.uint8)
+
+        n_blocks = int(np.ceil((quadrant_h*quadrant_w)/N_THREADS))
+        dtw2((n_blocks,), (N_THREADS,), (gpu_img, out, quadrant_w, width, quadrant_h*quadrant_w, width*height))
+        cp.cuda.runtime.deviceSynchronize()
+
+        return torch.tensor(out.get())
 

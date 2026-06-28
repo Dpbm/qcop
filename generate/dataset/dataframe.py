@@ -1,11 +1,13 @@
 """Holds Dataframe based utilities."""
-
 import os
 from typing import Any, Dict, List
 import csv as csvLib
 from pathlib import Path
 
 import polars as pl
+import nbformat
+from nbconvert import HTMLExporter
+from nbconvert.preprocessors import ExecutePreprocessor
 
 from utils.datatypes import FilePath
 from utils.constants import DEFAULT_RANDOM_SEED
@@ -101,10 +103,10 @@ class DF:
         return clean_df
 
     @staticmethod
-    def get_duplicated_files(df:pl.LazyFrame, clean:pl.LazyFrame) -> List[str]:
-        """Get the files that are duplicated by applying a df diff."""
+    def get_files_via_left_join(left:pl.LazyFrame, right:pl.LazyFrame) -> List[str]:
+        """Get the files that are on the left LazyFrame by applying a df diff."""
         duplicated_files = (
-            df.join(clean, on=df.collect_schema().names(), how="anti")
+            left.join(right, on=left.collect_schema().names(), how="anti")
             .collect()
             .get_column("file")
         )
@@ -116,4 +118,34 @@ class DF:
         """Remove the rows with invalid files."""
         print("[*] Removing %d files from dataset" % len(files))
         return df.filter(~pl.col("file").is_in(files))
+
+    @staticmethod
+    def keep_25_to_75_quantiles_by_depth(df:pl.LazyFrame) -> pl.LazyFrame:
+        """Create a lazy frame with only rows that the depth are in the middle two quantiles"""
+        return df.filter(
+                    pl.col("depth").is_between(
+                        pl.col("depth").quantile(0.25).over(pl.lit(1)),
+                        pl.col("depth").quantile(0.75).over(pl.lit(1)),
+                        closed="both"
+                    )
+                )
+
+    @staticmethod
+    def run_statistics_notebook(target_path:FilePath):
+        """Run the jupyter notebook to get the statistics"""
+        notebook_path = os.path.join(".", "notebooks", "data-analysis.ipynb")
+
+        with open(notebook_path, "r") as file:
+            nb = nbformat.read(file, as_version=4)
+
+        ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
+        ep.preprocess(nb, {"metadata": {"path": os.path.join(".","notebooks")}})
+
+        html_exporter = HTMLExporter()
+        body, _ = html_exporter.from_notebook_node(nb)
+
+        with open(target_path, "w", encoding="utf-8") as file:
+            print("[*] Saving pre-analysis...")
+            file.write(body)
+
 

@@ -34,5 +34,6 @@ dependencies:
       - seaborn
       - PyWavelets
       - cupy-cuda12x
+      - nbconvert
 platforms:
   - linux-64

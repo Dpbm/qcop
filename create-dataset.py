@@ -62,18 +62,28 @@ async def main(args:Arguments):
         checkpoint.next_stage()
         checkpoint.save()
     
-    if checkpoint.stage == Stages.DUPLICATES:
-        print("[*] Removing duplicated...")
+    if checkpoint.stage == Stages.CLEAN:
+        print("[*] Cleaning Data...")
+        DF.run_statistics_notebook(files_handler.pre_analysis_path)
+
         lazy_df = df.load_lazy_frame()
         clean_df = DF.clean_duplicated_rows(lazy_df)
-        duplicated_files = DF.get_duplicated_files(lazy_df, clean_df)
-        df.lazy_save_to_tmp(clean_df, files_handler.df_tmp_path)
 
+        duplicated_files = DF.get_files_via_left_join(lazy_df, clean_df)
         dont_exist = Files.remove_duplicated_files(duplicated_files)
         clean_df = DF.remove_rows_with_non_existant_files(clean_df, dont_exist)
-        df.lazy_save_to_tmp(clean_df, files_handler.df_tmp_path)
 
+        clean_df = DF.keep_25_to_75_quantiles_by_depth(clean_df)
+        discard_outliers_files = DF.get_files_via_left_join(lazy_df, clean_df)
+        
+        dont_exist = Files.remove_duplicated_files(duplicated_files)
+        clean_df = DF.remove_rows_with_non_existant_files(clean_df, dont_exist)
+
+        df.lazy_save_to_tmp(clean_df, files_handler.df_tmp_path)
         files_handler.move_tmp_to_definitive()
+        
+        DF.run_statistics_notebook(files_handler.post_analysis_path)
+
         checkpoint.next_stage()
         checkpoint.save()
 

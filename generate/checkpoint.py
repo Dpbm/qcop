@@ -12,7 +12,7 @@ class Stages(Enum):
     """Enum for dataset generation stages"""
     GEN_IMAGES = "gen"
     SHUFFLE = "shuffle"
-    DUPLICATES = "duplicates"
+    CLEAN = "clean"
     TRANSFORM = "transform"
     EXPORT = "export"
 
@@ -72,9 +72,9 @@ class Checkpoint:
             self._stage = Stages.SHUFFLE
 
         elif self._stage == Stages.SHUFFLE:
-            self._stage = Stages.DUPLICATES
+            self._stage = Stages.CLEAN
 
-        elif self._stage == Stages.DUPLICATES:
+        elif self._stage == Stages.CLEAN:
             self._stage = Stages.TRANSFORM
         
         elif self._stage == Stages.TRANSFORM:

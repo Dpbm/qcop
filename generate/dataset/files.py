@@ -20,6 +20,8 @@ class Files:
         self._ghz_file_path = os.path.join(base_folder, "ghz.pth")
         self._ghz_image_file_path = os.path.join(base_folder, "ghz.png")
         self._final_model_path = os.path.join(base_folder, "final_model.safetensors")
+        self._pre_analysis_path = os.path.join(base_folder, "pre-analysis.html")
+        self._post_analysis_path = os.path.join(base_folder, "post-analysis.html")
     
     @property
     def df_tmp_path(self) -> FilePath:
@@ -61,6 +63,16 @@ class Files:
         """Final model weights path"""
         return self._final_model_path
 
+    @property
+    def pre_anaylisis_path(self) -> FilePath:
+        """Pre analysis HTML file path"""
+        return self._pre_analysis_path
+
+    @property
+    def post_anaylisis_path(self) -> FilePath:
+        """Post analysis HTML file path"""
+        return self._post_analysis_path
+
     def create_dataset_folder(self):
         """Create the dataset folder."""
         os.makedirs(self._dataset_images_path, exist_ok=True)
@@ -85,7 +97,7 @@ class Files:
             except FileNotFoundError:
                 print("[!] File %s doesn't exist"%file)
                 dont_exist_files.append(file)
-        
+            
         return dont_exist_files
 
     def move_tmp_to_definitive(self):
