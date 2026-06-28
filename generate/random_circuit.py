@@ -60,10 +60,7 @@ def generate_circuit(n_qubits:int, total_gates:int) -> QuantumCircuit:
     qc = QuantumCircuit(n_qubits)
 
     for _ in range(total_gates):
-        add_single_qubit_gate = random.randint(0, 1)
-        add_barrier = random.random() < 0.1  # 10% of chance
-
-        if add_single_qubit_gate:
+        if random.random() < 0.5:
             qubit = [random.randint(0, n_qubits - 1)]
             gate = SingleQubitGate.get_random_gate()
             qc.append(gate, qubit)
@@ -72,19 +69,8 @@ def generate_circuit(n_qubits:int, total_gates:int) -> QuantumCircuit:
             gate = MultiQubitGate.get_random_gate()
             qc.append(gate, qubits)
 
-        if add_barrier:
+        if random.random() < 0.1:
             qc.barrier()
-
-    return qc
-
-def generate_circuit_worst_case(n_qubits: int, total_gates: int) -> QuantumCircuit:
-    """Generate the circuit as long as possible"""
-    qc = QuantumCircuit(n_qubits)
-    
-    for _ in range(total_gates):
-        gate = SingleQubitGate.get_random_gate()
-        qc.append(gate, [0])
-        qc.barrier()
 
     return qc
 
