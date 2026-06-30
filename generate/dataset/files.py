@@ -64,12 +64,12 @@ class Files:
         return self._final_model_path
 
     @property
-    def pre_anaylisis_path(self) -> FilePath:
+    def pre_analysis_path(self) -> FilePath:
         """Pre analysis HTML file path"""
         return self._pre_analysis_path
 
     @property
-    def post_anaylisis_path(self) -> FilePath:
+    def post_analysis_path(self) -> FilePath:
         """Post analysis HTML file path"""
         return self._post_analysis_path
 

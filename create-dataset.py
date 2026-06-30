@@ -88,7 +88,7 @@ async def main(args:Arguments):
         checkpoint.save()
 
     if checkpoint.stage == Stages.TRANSFORM:
-        print("[*] Removing duplicated (%d)..." % checkpoint.index)
+        print("[*] Transforming images (%d)..." % checkpoint.index)
         clean_df = df.load_lazy_frame()
         img_handler.transform_images(
                 files_handler.h5_file_path, 

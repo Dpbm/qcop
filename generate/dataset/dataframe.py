@@ -145,7 +145,7 @@ class DF:
         body, _ = html_exporter.from_notebook_node(nb)
 
         with open(target_path, "w", encoding="utf-8") as file:
-            print("[*] Saving pre-analysis...")
+            print("[*] Saving %s ..."%target_path)
             file.write(body)
 
 
