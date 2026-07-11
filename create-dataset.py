@@ -1,17 +1,25 @@
 """Local pipeline for dataset creation"""
 
+import argparse
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import os
 
-from args.parser import parse_args_generate, ArgumentsGenerate
 from utils.colors import Colors
 from generate.dataset.dataframe import DF
 from generate.dataset.images import Images, Rows
 from generate.dataset.files import Files
 from generate.checkpoint import Checkpoint, Stages
 from ghz import gen_circuit as gen_ghz_circuit
-from export import KaggleExporter, HuggingFaceExporter
+from export import KaggleExporter, HuggingFaceExporter, export_parallel
+from utils.constants import (
+    DEFAULT_SHOTS,
+    DEFAULT_NUM_QUBITS,
+    DEFAULT_MAX_TOTAL_GATES,
+    DEFAULT_THREADS,
+    DEFAULT_AMOUNT_OF_CIRCUITS,
+    DEFAULT_TARGET_FOLDER,
+    DEFAULT_DATASET_NAME
+)
 
 
 def update_rows_callback(rows:Rows, checkpoint:Checkpoint, df:DF, inc: int):
@@ -23,7 +31,7 @@ def transform_images_callback(checkpoint:Checkpoint):
     checkpoint.index += 1
     checkpoint.save()
 
-async def main(args:ArgumentsGenerate):
+async def main(args:argparse.Namespace):
     print("[*] Setting up files...")
     files_handler = Files(args.target_folder)
     files_handler.create_dataset_folder()
@@ -102,23 +110,35 @@ async def main(args:ArgumentsGenerate):
     
     if checkpoint.stage == Stages.EXPORT:
         print("[*] Exporting...")
-        kaggle = KaggleExporter(args.target_folder, dataset_name=args.dataset_name_kaggle)
-        hf = HuggingFaceExporter(os.getenv("HUGGINGFACE_API_KEY"), args.target_folder, dataset_name=args.dataset_name_hf)
-
-        loop = asyncio.get_running_loop()
-
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            kaggle_upload = loop.run_in_executor(pool,kaggle.upload_dataset)
-            hf_upload = loop.run_in_executor(pool,hf.upload_dataset)
-            await asyncio.gather(kaggle_upload, hf_upload)
-
+        await export_parallel(args.target_folder, args.dataset_name_kaggle,os.getenv("HUGGINGFACE_API_KEY"), args.dataset_name_hf)
         checkpoint.next_stage()
         checkpoint.save()
 
 
 if __name__ == "__main__":
     try:
-        args = parse_args_generate()
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--dataset-name-kaggle", type=str, default=DEFAULT_DATASET_NAME)
+        parser.add_argument("--dataset-name-hf", type=str, default=DEFAULT_DATASET_NAME)
+        parser.add_argument("--threads", type=int, default=DEFAULT_THREADS)
+
+        parser.add_argument("--shots", type=int, default=DEFAULT_SHOTS)
+        parser.add_argument("--n-qubits", type=int, default=DEFAULT_NUM_QUBITS)
+        parser.add_argument("--max-gates", type=int, default=DEFAULT_MAX_TOTAL_GATES)
+
+        parser.add_argument(
+            "--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS
+        )
+        parser.add_argument("--target-folder", type=str, default=DEFAULT_TARGET_FOLDER)
+
+    if len(sys.argv) <= 2:
+        parser.print_usage()
+        exit()
+        
+        args = parser.parse_args()
+        parsed_arguments = ArgumentsGenerate()
+        parsed_arguments.parse(args)
+
         asyncio.run(main(args))
     except KeyboardInterrupt:
         exit()

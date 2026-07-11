@@ -35,5 +35,7 @@ dependencies:
       - PyWavelets
       - cupy-cuda12x
       - nbconvert
+      - transformers
+      - accelerate
 platforms:
   - linux-64

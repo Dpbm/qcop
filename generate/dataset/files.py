@@ -22,6 +22,9 @@ class Files:
         self._final_model_path = os.path.join(base_folder, "final_model.safetensors")
         self._pre_analysis_path = os.path.join(base_folder, "pre-analysis.html")
         self._post_analysis_path = os.path.join(base_folder, "post-analysis.html")
+
+        self._embeddings_checkpoint_path = os.path.join(base_folder, "embeddings_checkpoint.json")
+        self._embeddings_path = os.path.join(base_folder, "embeddings.h5")
     
     @property
     def df_tmp_path(self) -> FilePath:
@@ -72,6 +75,16 @@ class Files:
     def post_analysis_path(self) -> FilePath:
         """Post analysis HTML file path"""
         return self._post_analysis_path
+    
+    @property
+    def embeddings_checkpoint_path(self) -> FilePath:
+        """Embeddings checkpoint file path"""
+        return self._embeddings_checkpoint_path
+
+    @property
+    def embeddings_path(self) -> FilePath:
+        """Embeddings h5 file path"""
+        return self._embeddings_path
 
     def create_dataset_folder(self):
         """Create the dataset folder."""

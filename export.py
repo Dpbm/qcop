@@ -2,9 +2,11 @@
 
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from time import ctime
+from time import ctime 
 from pathlib import Path
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 import kagglehub as kh
 from huggingface_hub import HfApi
@@ -21,7 +23,8 @@ class Exporter(ABC):
             "*.png",
             "*tmp*",
             "*.dat",
-            "*.safetensors"
+            "*.safetensors",
+            "embeddings_checkpoint.json"
         ]
 
     @abstractmethod
@@ -53,7 +56,8 @@ class KaggleExporter(Exporter):
             "*tmp*",
             "*.dat",
             "*.h5",
-            "*.pth"
+            "*.pth",
+            "embeddings_checkpoint.json"
         ]
 
     def upload_dataset(self):
@@ -108,13 +112,13 @@ class HuggingFaceExporter(Exporter):
             "*tmp*",
             "*.dat",
             "*.h5",
-            "*.pth"
+            "*.pth",
+            "embeddings_checkpoint.json"
         ]
 
     def upload_dataset(self):
         """Upload dataset to HuggingFace"""
         assert self._dataset_name is not None, "You must set a dataset name"
-        os.environ["HF_HOME"] = "/tmp/huggingface"
         print("[*] Uploading to Huggingface")
         self._api.upload_folder(
             folder_path=self._target_folder,
@@ -126,7 +130,6 @@ class HuggingFaceExporter(Exporter):
     def upload_model(self):
         """Upload model to Kaggle"""
         assert self._model_name is not None, "You must set a model name"
-        os.environ["HF_HOME"] = "/tmp/huggingface"
         print("[*] Uploading to Huggingface")
         self._api.upload_file(
             path_or_fileobj=self._model_file_path,
@@ -134,3 +137,17 @@ class HuggingFaceExporter(Exporter):
             repo_id=self._model_name,
             repo_type="model",
         )
+
+async def export_parallel(target_folder:FilePath, kaggle_df_name:str, hf_token:str, hf_df_name:str):
+    """Export datasets in parallel using asyncio"""
+
+    kaggle = KaggleExporter(target_folder, dataset_name=kaggle_df_name)
+    hf = HuggingFaceExporter(hf_token, target_folder, dataset_name=hf_df_name)
+
+    loop = asyncio.get_running_loop()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        kaggle_upload = loop.run_in_executor(pool,kaggle.upload_dataset)
+        hf_upload = loop.run_in_executor(pool,hf.upload_dataset)
+        await asyncio.gather(kaggle_upload, hf_upload)
+

@@ -11,8 +11,8 @@ DEBUG = os.environ.get("DEBUG") or False
 # ----- RANDOMNESS --------
 DEFAULT_RANDOM_SEED = 32
 
-
-
+DEFAULT_DATASET_NAME="dqcop"
+DEFAULT_MODEL_NAME="qcop"
 
 DEFAULT_EPOCHS = 60
 
