@@ -4,7 +4,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import os
 
-from args.parser import parse_args, Arguments
+from args.parser import parse_args_generate, ArgumentsGenerate
 from utils.colors import Colors
 from generate.dataset.dataframe import DF
 from generate.dataset.images import Images, Rows
@@ -23,7 +23,7 @@ def transform_images_callback(checkpoint:Checkpoint):
     checkpoint.index += 1
     checkpoint.save()
 
-async def main(args:Arguments):
+async def main(args:ArgumentsGenerate):
     print("[*] Setting up files...")
     files_handler = Files(args.target_folder)
     files_handler.create_dataset_folder()
@@ -118,7 +118,7 @@ async def main(args:Arguments):
 
 if __name__ == "__main__":
     try:
-        args = parse_args()
+        args = parse_args_generate()
         asyncio.run(main(args))
     except KeyboardInterrupt:
         exit()

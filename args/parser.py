@@ -5,43 +5,28 @@ import argparse
 from typing import Optional
 
 from utils.constants import (
-    DEFAULT_EPOCHS,
     DEFAULT_SHOTS,
     DEFAULT_NUM_QUBITS,
     DEFAULT_MAX_TOTAL_GATES,
     DEFAULT_THREADS,
-    DEFAULT_BATCH_SIZE, DEFAULT_AMOUNT_OF_CIRCUITS,
-    DEFAULT_NEW_DIM,
-    DEFAULT_TRAIN_PERCENTAGE,
-    DEFAULT_TEST_PERCENTAGE,
+    DEFAULT_AMOUNT_OF_CIRCUITS,
     DEFAULT_TARGET_FOLDER,
-    DEFAULT_CHECKPOINT,
-    DEFAULT_EARLY_STOP_PATIENCE,
-    DEFAULT_EARLY_STOP_THRESHOLD
 )
 from utils.datatypes import Dimensions, FilePath
 
 DEFAULT_DATASET_NAME="dqcop"
 DEFAULT_MODEL_NAME="qcop"
 
-class Arguments:
-    """Parsed args types"""
+class ArgumentsGenerate:
+    """Parsed args types for dataset generation"""
 
     __slots__ = [
-            "_epochs",
-            "_batch_size",
-            "_train_size",
-            "_test_size",
             "_threads",
             "_shots",
             "_n_qubits",
             "_max_gates",
             "_amount_circuits",
             "_target_folder",
-            "_checkpoint",
-            "_new_image_dim",
-            "_es_patience",
-            "_es_threshold",
             "_dataset_name_kaggle",
             "_dataset_name_hf",
             "_model_name_kaggle",
@@ -50,20 +35,12 @@ class Arguments:
     def __init__(self):
         """set default arguments"""
 
-        self._epochs = DEFAULT_EPOCHS
-        self._batch_size = DEFAULT_BATCH_SIZE
-        self._train_size = DEFAULT_TRAIN_PERCENTAGE
-        self._test_size = DEFAULT_TEST_PERCENTAGE
         self._threads = DEFAULT_THREADS
         self._shots = DEFAULT_SHOTS
         self._n_qubits = DEFAULT_NUM_QUBITS
         self._max_gates = DEFAULT_MAX_TOTAL_GATES
         self._amount_circuits = DEFAULT_AMOUNT_OF_CIRCUITS
         self._target_folder = DEFAULT_TARGET_FOLDER
-        self._checkpoint = DEFAULT_CHECKPOINT
-        self._new_image_dim = DEFAULT_NEW_DIM
-        self._es_patience = DEFAULT_EARLY_STOP_PATIENCE
-        self._es_threshold = DEFAULT_EARLY_STOP_THRESHOLD
         self._dataset_name_kaggle = DEFAULT_DATASET_NAME
         self._dataset_name_hf = DEFAULT_DATASET_NAME
         self._model_name_kaggle = DEFAULT_MODEL_NAME
@@ -71,64 +48,17 @@ class Arguments:
 
     def parse(self, args: argparse.Namespace):
         """Parse arguments from argparse"""
-        self._epochs = args.epochs
-        self._batch_size = args.batch_size
-        self._train_size = args.train_size
-        self._test_size = args.test_size
         self._threads = args.threads
         self._shots = args.shots
         self._n_qubits = args.n_qubits
         self._max_gates = args.max_gates
         self._amount_circuits = args.amount_circuits
         self._target_folder = args.target_folder
-        self._checkpoint = args.checkpoint
-        self._new_image_dim = args.new_image_dim
-        self._es_patience = args.es_patience
-        self._es_threshold = args.es_threshold
         self._dataset_name_kaggle = args.dataset_name_kaggle
         self._dataset_name_hf = args.dataset_name_hf
         self._model_name_kaggle = args.model_name_kaggle
         self._model_name_hf = args.model_name_hf
 
-    @property
-    def epochs(self) -> int:
-        """Get epochs data"""
-        return self._epochs  # type: ignore
-
-    @epochs.setter
-    def epochs(self, value: int):
-        """Set epochs data"""
-        self._epochs = value
-
-    @property
-    def batch_size(self) -> int:
-        """Get batch_size data"""
-        return self._batch_size  # type: ignore
-
-    @batch_size.setter
-    def batch_size(self, value: int):
-        """Set batch_size data"""
-        self._batch_size
-
-    @property
-    def train_size(self) -> int:
-        """Get train_size data"""
-        return self._train_size  # type: ignore
-
-    @train_size.setter
-    def train_size(self, value: int):
-        """Set train_size data"""
-        self._train_size = value
-
-    @property
-    def test_size(self) -> int:
-        """Get test_size data"""
-        return self._test_size  # type: ignore
-
-    @test_size.setter
-    def test_size(self, value: int):
-        """Set test_size data"""
-        self._test_size = value
 
     @property
     def threads(self) -> int:
@@ -191,46 +121,6 @@ class Arguments:
         self._target_folder = value
 
     @property
-    def checkpoint(self) -> Optional[FilePath]:
-        """Get checkpoint data"""
-        return self._checkpoint  # type: ignore
-
-    @checkpoint.setter
-    def checkpoint(self, value: Optional[FilePath]):
-        """Set checkpoint data"""
-        self._checkpoint = value
-
-    @property
-    def new_image_dim(self) -> Dimensions:
-        """Get new_image_dim data"""
-        return self._new_image_dim  # type: ignore
-
-    @new_image_dim.setter
-    def new_image_dim(self, value: Dimensions):
-        """Set new_image_dim data"""
-        self._new_image_dim = value
-    
-    @property
-    def es_patience(self) -> int:
-        """Get es_patience data"""
-        return self._es_patience  # type: ignore
-
-    @es_patience.setter
-    def es_patience(self, value: int):
-        """Set es_patience data"""
-        self._es_patience = value
-
-    @property
-    def es_threshold(self) -> float:
-        """Get es_threshold data"""
-        return self._es_threshold  # type: ignore
-
-    @es_threshold.setter
-    def es_threshold(self, value: float):
-        """Set es_threshold data"""
-        self._es_threshold = value
-    
-    @property
     def dataset_name_kaggle(self) -> str:
         """Get dataset_name_kaggle data"""
         return self._dataset_name_kaggle  # type: ignore
@@ -271,17 +161,12 @@ class Arguments:
         self._model_name_hf = value
     
 
-def parse_args() -> Arguments:
+def parse_args_generate() -> ArgumentsGenerate:
     """
     Use argparse to parse CLI arguments for all scripts
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
-    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
-    parser.add_argument("--train-size", type=float, default=DEFAULT_TRAIN_PERCENTAGE)
-    parser.add_argument("--test-size", type=float, default=DEFAULT_TEST_PERCENTAGE)
-    parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT)
     parser.add_argument("--dataset-name-kaggle", type=str, default=DEFAULT_DATASET_NAME)
     parser.add_argument("--dataset-name-hf", type=str, default=DEFAULT_DATASET_NAME)
     parser.add_argument("--model-name-kaggle", type=str, default=DEFAULT_MODEL_NAME)
@@ -297,17 +182,13 @@ def parse_args() -> Arguments:
         "--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS
     )
     parser.add_argument("--target-folder", type=str, default=DEFAULT_TARGET_FOLDER)
-    parser.add_argument("--new-image-dim", type=int, nargs=2, default=DEFAULT_NEW_DIM)
-
-    parser.add_argument("--es-patience", type=int, default=DEFAULT_EARLY_STOP_PATIENCE)
-    parser.add_argument("--es-threshold", type=float, default=DEFAULT_EARLY_STOP_THRESHOLD)
 
     if len(sys.argv) <= 2:
         parser.print_usage()
         raise SystemExit
         
     args = parser.parse_args()
-    parsed_arguments = Arguments()
+    parsed_arguments = ArgumentsGenerate()
     parsed_arguments.parse(args)
 
     return parsed_arguments
