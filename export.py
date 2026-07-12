@@ -30,12 +30,14 @@ class Exporter(ABC):
             "dataset/",
             "*.json",
             "checkpoint_*",
+            "model_*",
             "*.csv",
             "*.png",
             "*tmp*",
             "*.dat",
             "*.h5",
             "*.pth",
+            "*.html"
         ]
 
     @abstractmethod
@@ -135,5 +137,18 @@ async def export_parallel(target_folder:FilePath, kaggle_df_name:str, hf_token:s
     with ThreadPoolExecutor(max_workers=2) as pool:
         kaggle_upload = loop.run_in_executor(pool,kaggle.upload_dataset)
         hf_upload = loop.run_in_executor(pool,hf.upload_dataset)
+        await asyncio.gather(kaggle_upload, hf_upload)
+
+async def export_model_parallel(target_folder:FilePath, kaggle_model_name:str, hf_token:str, hf_model_name:str):
+    """Export model in parallel using asyncio"""
+
+    kaggle = KaggleExporter(target_folder, model_name=kaggle_model_name)
+    hf = HuggingFaceExporter(hf_token, target_folder, model_name=hf_model_name)
+
+    loop = asyncio.get_running_loop()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        kaggle_upload = loop.run_in_executor(pool,kaggle.upload_model)
+        hf_upload = loop.run_in_executor(pool,hf.upload_model)
         await asyncio.gather(kaggle_upload, hf_upload)
 

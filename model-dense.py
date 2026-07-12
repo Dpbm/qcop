@@ -1,6 +1,8 @@
 import argparse
+import shutil
 from functools import reduce
 import json
+import asyncio
 
 from tqdm import trange
 import pandas as pd
@@ -9,12 +11,12 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from utils.constants import DEFAULT_RANDOM_SEED
-
+from utils.constants import DEFAULT_RANDOM_SEED, DEFAULT_MODEL_NAME
 from generate.dataset.files import Files
 from dataset import Data
+from export import export_model_parallel
 
-def main():
+async def main():
     parser = argparse.ArgumentParser(description="Train Dense Model")
     parser.add_argument("--batch-size", type=int, default=512)
     parser.add_argument("--target-folder", type=str, required=True)
@@ -25,6 +27,8 @@ def main():
     parser.add_argument("--scheduler-patience", type=int, default=4)
     parser.add_argument("--scheduler-threshold", type=float, default=0.1)
     parser.add_argument("--load-checkpoint", type=bool, default=False)
+    parser.add_argument("--model-name-kaggle", type=str, default=DEFAULT_MODEL_NAME)
+    parser.add_argument("--model-name-hf", type=str, default=DEFAULT_MODEL_NAME)
     args = parser.parse_args()
 
     files_handler = Files(args.target_folder)
@@ -82,7 +86,7 @@ def main():
     early_stop_counter = 0
     starting_epoch = 0
 
-    if args.load_checkpoint:
+    if args.load_checkpoint and os.path.exists(files_handler.model_checkpoint_path):
         print("[*] Loading Checkpoint")
 
         with open(files_handler.model_checkpoint_path, "r") as checkpoint:
@@ -90,8 +94,9 @@ def main():
             starting_epoch = checkpoint_data["epoch"]
             best_loss = checkpoint_data["best_loss"]
             early_stop_counter = checkpoint_data["es_counter"]
-
-            state_dict = torch.load(checkpoint_data["weights"], map_location=device)
+            
+            model_weights = checkpoint_data["weights"]
+            state_dict = torch.load(model_weights, map_location=device)
             model.load_state_dict(state_dict)
 
             scheduler.load_state_dict(checkpoint_data["scheduler"])
@@ -178,7 +183,11 @@ def main():
             print("[*] Stopping earlier")
             break
 
-    print("[*] Finished Training")
+    print("[*] Evaluating GHZ")
+    shutil.copy(model_weights, files_handler.final_model_path)
+
+    state_dict = torch.load(model_weights, map_location=device)
+    model.load_state_dict(state_dict)
 
     model.eval()
     ghz = torch.load(files_handler.ghz_path, map_location=device)
@@ -187,6 +196,8 @@ def main():
 
     print("GHZ prediction: ", output)
 
-if __name__ == "__main__":
+    print("[*] Exporting model...")
+    await export_model_parallel(args.target_folder, args.model_name_kaggle, os.getenv("HUGGINGFACE_API_KEY"), args.model_name_hf)
 
-    main()
+if __name__ == "__main__":
+    asyncio.run(main())

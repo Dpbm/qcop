@@ -17,3 +17,9 @@ run-dataset:
 
 run-embeddings:
 	accelerate launch embeddings.py --target-folder ./data --batch-size 100 --preload-amount 500 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
+
+run-ghz:
+	python ghz.py --target-folder ./data
+
+run-model:
+	python model-dense.py --target-folder ./data --epochs 30 --load-checkpoint True
