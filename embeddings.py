@@ -44,6 +44,7 @@ def main():
     
     indexes = []
     finished = False
+    saved_shape = os.path.exists(files_handler.embeddings_shape_path)
 
     if os.path.exists(files_handler.embeddings_checkpoint_path):
         print("[*] Reading chekpoint")
@@ -63,22 +64,24 @@ def main():
                     json.dump({"indexes":indexes, finished:False},checkpoint)
 
             print("[*] total images in the dataset: ", len(indexes))
-
             current_index = 0
             while indexes:
-
-                get_index = lambda i : (current_index*args.preload_amount)+i
-                selected_indexes = [indexes[get_index(i)] 
+                selected_indexes = [indexes[i] 
                                         for i in range(args.preload_amount)
-                                        if get_index(i) <= len(indexes)-1]
-                preloaded_images = [Image.fromarray(dataset[selected_indexes[i]][:])
-                                             for i in range(args.preload_amount)]
+                                        if i <= len(indexes)-1]
+                preloaded_images = [Image.fromarray(dataset[index][:])
+                                             for index in selected_indexes]
                 
                 print("Processing (", current_index, ")")
 
-                embeddings = np.array(pipe(preloaded_images))
-                embeddings_shape = embeddings.shape
-                embeddings = np.reshape(embeddings, (args.preload_amount, embeddings_shape[1]*embeddings_shape[2]*embeddings_shape[3]))
+                embeddings = np.array(pipe(preloaded_images), dtype=np.float16)
+                
+                if not saved_shape:
+                    with open(files_handler.embeddings_shape_path, "w") as shape_file:
+                        print("[*] Saving embeddings format")
+                        json.dump(list(embeddings.shape[1:]), shape_file)
+                    saved_shape = True
+
 
                 with h5py.File(files_handler.embeddings_path, "a") as embeddings_dataset:
                     for embedding,index in tqdm(zip(embeddings, selected_indexes), desc="Saving embeddings: "):

@@ -30,8 +30,7 @@ from utils.constants import (
 )
 from utils.helpers import debug, PlotImages
 from utils.colors import Colors
-from utils.datatypes import FilePath, df_schema
-from args.parser import parse_args, Arguments
+from utils.datatypes import FilePath, df_schema from args.parser import parse_args, Arguments
 
 StateDict = OrderedDict
 Device = str
