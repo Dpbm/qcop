@@ -7,6 +7,7 @@ import pandas as pd
 import torch.nn as nn
 import torch
 from torch.utils.data import DataLoader, random_split
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from utils.constants import DEFAULT_RANDOM_SEED
 
@@ -19,6 +20,11 @@ def main():
     parser.add_argument("--target-folder", type=str, required=True)
     parser.add_argument("--train-percentage", type=float, default=0.7)
     parser.add_argument("--epochs", type=int, default=60)
+    parser.add_argument("--es-patience", type=int, default=4)
+    parser.add_argument("--es-threshold", type=float, default=0.1)
+    parser.add_argument("--scheduler-patience", type=int, default=4)
+    parser.add_argument("--scheduler-threshold", type=float, default=0.1)
+    parser.add_argument("--load-checkpoint", type=bool, default=False)
     args = parser.parse_args()
 
     files_handler = Files(args.target_folder)
@@ -65,12 +71,36 @@ def main():
 
     print("-"*30)
     print("Training Model")
-    opt = optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    opt = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    scheduler = ReduceLROnPlateau(opt, patience=args.scheduler_patience, threshold=args.scheduler_threshold)
 
-    progress = pd.DataFrame(columns=("epoch", "loss", "iter", "output"))
+    progress = pd.DataFrame(columns=("epoch", "loss", "iter", "output", "step"))
+
     progress_i = 0
+    best_loss = float('inf')
+    model_weights = None
+    early_stop_counter = 0
+    starting_epoch = 0
+
+    if args.load_checkpoint:
+        print("[*] Loading Checkpoint")
+
+        with open(files_handler.model_checkpoint_path, "r") as checkpoint:
+            checkpoint_data = json.load(checkpoint)
+            starting_epoch = checkpoint_data["epoch"]
+            best_loss = checkpoint_data["best_loss"]
+            early_stop_counter = checkpoint_data["es_counter"]
+
+            state_dict = torch.load(checkpoint_data["weights"], map_location=device)
+            model.load_state_dict(state_dict)
+
+            scheduler.load_state_dict(checkpoint_data["scheduler"])
+
+            progress = pd.load_csv(files_handler.history_path)
+            progress_i = len(progress)
+
     
-    for epoch in trange(args.epochs):
+    for epoch in trange(starting_epoch, args.epochs):
         epoch_loss = 0
 
         model.train(True)
@@ -94,19 +124,68 @@ def main():
                     "epoch": epoch,
                     "loss": loss_step,
                     "iter": i,
-                    "output": str(outputs.tolist())
+                    "output": str(outputs.tolist()),
+                    "step": "train"
                 }
             progress_i += 1
 
             if(i % 10 == 0):
                 print("Current loss: ", epoch_loss/(i+1))
 
+        print("Train Loss: ", epoch_loss, epoch_loss/len(train_loader))
+
+        model.eval()
         
+        test_loss = 0
+        with torch.no_grad():
+            for i, data in enumerate(test_loader):
+                inputs = data[0].to(device)
+                labels = data[1].to(device)
 
-        print(epoch_loss, epoch_loss/len(train_loader))
+                outputs = model(inputs)
+                loss = loss_fn(outputs, labels)
+                test_loss += loss
 
+        print("Test Loss: ", test_loss, test_loss/len(test_loader))
 
-    
+        print("[*] Saving history")
+        progress.to_csv(files_handler.history_path, index=False)
+
+        if test_loss < best_loss:
+            print("[*] Saving model weights")
+            best_loss = test_loss
+            model_path = torch.save(model.state_dict(), model_path)
+            model_weights = model_path
+            torch.save(model.state_dict(), model_path)
+
+        if abs(best_loss-test_loss) > args.es_threshold:
+            print("[*] model has not evolved")
+            early_stop_counter += 1
+        else:
+            early_stop_counter = 0
+
+        with open(files_handler.model_checkpoint_path, "w") as checkpoint:
+            print("[*] Saving Checkpoint")
+            json.dump({
+                    "epoch": epoch+1, 
+                    "best_loss": best_loss, 
+                    "weights":model_weights,
+                    "es_counter": early_stop_counter
+                    "scheduler": scheduler.state_dict()
+                }, checkpoint)
+        
+        if early_stop_counter >= args.es_patience:
+            print("[*] Stopping earlier")
+            break
+
+    print("[*] Finished Training")
+
+    model.eval()
+    ghz = torch.load(files_handler.ghz_path, map_location=device)
+    with torch.no_grad():
+        output = model(ghz)
+
+    print("GHZ prediction: ", output)
 
 if __name__ == "__main__":
 

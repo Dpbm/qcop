@@ -17,7 +17,6 @@ from utils.constants import (
     DEFAULT_MAX_TOTAL_GATES,
     DEFAULT_THREADS,
     DEFAULT_AMOUNT_OF_CIRCUITS,
-    DEFAULT_TARGET_FOLDER,
     DEFAULT_DATASET_NAME
 )
 
@@ -129,7 +128,7 @@ if __name__ == "__main__":
         parser.add_argument(
             "--amount-circuits", type=int, default=DEFAULT_AMOUNT_OF_CIRCUITS
         )
-        parser.add_argument("--target-folder", type=str, default=DEFAULT_TARGET_FOLDER)
+        parser.add_argument("--target-folder", type=str, required=True)
 
     if len(sys.argv) <= 2:
         parser.print_usage()

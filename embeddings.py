@@ -12,10 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from generate.dataset.files import Files
-from utils.constants import DEFAULT_DATASET_NAME
+from utils.constants import DEFAULT_DATASET_NAME, MODEL
 from export import export_parallel
 
-MODEL = "google/vit-base-patch16-384"
 
 def main():
     parser = argparse.ArgumentParser(description=f"Extract image embeddings from dataset with {MODEL}")

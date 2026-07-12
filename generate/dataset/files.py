@@ -2,6 +2,7 @@
 import os
 import shutil
 from typing import List
+from time impor ctime
 
 from tqdm import tqdm
 
@@ -27,6 +28,9 @@ class Files:
         self._embeddings_path = os.path.join(base_folder, "embeddings.h5")
         self._embeddings_shape_path = os.path.join(base_folder, "embeddings_shape.json")
     
+        self._model_checkpoint_path = os.path.join(base_folder, "checkpoint.json")
+        self._history_path = os.path.join(base_folder, "history.csv")
+
     @property
     def df_tmp_path(self) -> FilePath:
         """Returns Temp Dataframe path."""
@@ -92,10 +96,25 @@ class Files:
         """Embeddings dimensions"""
         return self._embeddings_shape_path
 
+    @property
+    def model_weights_path(self) -> FilePath:
+        """Create a path for the model weights"""
+        return os.path.join(self._base_folder, f"model_{ctime()}")
 
+    @property
+    def model_checkpoint_path(self) -> FilePath:
+        """Model checkpoint"""
+        return self._model_checkpoint_path
+
+    @property
+    def history_path(self) -> FilePath:
+        """Model evolution history checkpoint"""
+        return self._history_path
+    
     def create_dataset_folder(self):
         """Create the dataset folder."""
         os.makedirs(self._dataset_images_path, exist_ok=True)
+
 
     @staticmethod
     def remove_duplicated_files(files:List[FilePath]) -> List[FilePath]:

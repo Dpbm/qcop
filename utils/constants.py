@@ -4,8 +4,7 @@ import os
 import time
 
 
-# ------ DEBUGGING ---------
-DEBUG = os.environ.get("DEBUG") or False
+MODEL = "google/vit-base-patch16-384"
 
 
 # ----- RANDOMNESS --------
