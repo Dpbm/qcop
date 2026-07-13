@@ -99,8 +99,9 @@ async def main():
             model_weights = checkpoint_data["weights"]
             state_dict = torch.load(model_weights, map_location=device)
             model.load_state_dict(state_dict)
-
-            scheduler.load_state_dict(checkpoint_data["scheduler"])
+            
+            scheduler_data = torch.load(files_handler.scheduler_path)
+            scheduler.load_state_dict(scheduler_data)
 
             progress = pd.load_csv(files_handler.history_path)
             progress_i = len(progress)
@@ -125,6 +126,9 @@ async def main():
             opt.step()
             
             loss_step = loss.item()
+
+            scheduler.step(loss_step)
+
             epoch_loss += loss_step
             progress.loc[progress_i] = {
                     "epoch": epoch,
@@ -177,8 +181,8 @@ async def main():
                     "best_loss": best_loss, 
                     "weights":model_weights,
                     "es_counter": early_stop_counter,
-                    "scheduler": scheduler.state_dict()
                 }, checkpoint)
+            torch.save(scheduler.state_dict(), files_handler.scheduler_path)
         
         if early_stop_counter >= args.es_patience:
             print("[*] Stopping earlier")
@@ -194,7 +198,6 @@ async def main():
     ghz = torch.load(files_handler.ghz_path, map_location=device)
     with torch.no_grad():
         output = model(ghz)
-
     print("GHZ prediction: ", output)
 
     print("[*] Exporting model...")

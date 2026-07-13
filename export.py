@@ -24,7 +24,7 @@ class Exporter(ABC):
             "*tmp*",
             "*.dat",
             "*.safetensors",
-            "embeddings_checkpoint.json"
+            "*.pt"
         ]
     ignore_patterns_model = [
             "dataset/",
@@ -37,7 +37,8 @@ class Exporter(ABC):
             "*.dat",
             "*.h5",
             "*.pth",
-            "*.html"
+            "*.html",
+            "*.pt"
         ]
 
     @abstractmethod
