@@ -3,6 +3,7 @@ import shutil
 from functools import reduce
 import json
 import asyncio
+import os
 
 from tqdm import trange
 import pandas as pd
@@ -159,7 +160,7 @@ async def main():
         if test_loss < best_loss:
             print("[*] Saving model weights")
             best_loss = test_loss
-            model_path = torch.save(model.state_dict(), model_path)
+            model_path = files_handler.model_weights_path
             model_weights = model_path
             torch.save(model.state_dict(), model_path)
 
@@ -175,7 +176,7 @@ async def main():
                     "epoch": epoch+1, 
                     "best_loss": best_loss, 
                     "weights":model_weights,
-                    "es_counter": early_stop_counter
+                    "es_counter": early_stop_counter,
                     "scheduler": scheduler.state_dict()
                 }, checkpoint)
         

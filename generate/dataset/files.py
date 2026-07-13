@@ -2,7 +2,7 @@
 import os
 import shutil
 from typing import List
-from time impor ctime
+from time import ctime
 
 from tqdm import tqdm
 
