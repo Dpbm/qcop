@@ -8,6 +8,7 @@ import os
 from tqdm import trange
 import pandas as pd
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
 from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -58,7 +59,6 @@ async def main():
                 nn.Linear(first_hidden_size, second_hidden_size),
                 nn.GELU(),
                 nn.Linear(second_hidden_size, output_layer_size),
-                nn.Softmax(dim=1)
             ).to(device)
     
 
@@ -118,7 +118,7 @@ async def main():
 
             opt.zero_grad()
 
-            outputs = model(inputs)
+            outputs = F.log_softmax(model(inputs), dim=1)
 
             loss = loss_fn(outputs, labels)
             loss.backward()
@@ -152,9 +152,9 @@ async def main():
                 inputs = data[0].to(device)
                 labels = data[1].to(device)
 
-                outputs = model(inputs)
+                outputs = F.log_softmax(model(inputs), dim=1)
                 loss = loss_fn(outputs, labels)
-                test_loss += loss
+                test_loss += loss.item()
 
         print("Test Loss: ", test_loss, test_loss/len(test_loader))
 
@@ -197,7 +197,7 @@ async def main():
     model.eval()
     ghz = torch.load(files_handler.ghz_path, map_location=device)
     with torch.no_grad():
-        output = model(ghz)
+        output = F.softmax(model(ghz), dim=1)
     print("GHZ prediction: ", output)
 
     print("[*] Exporting model...")
