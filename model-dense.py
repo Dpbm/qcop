@@ -24,9 +24,7 @@ async def main():
     parser.add_argument("--target-folder", type=str, required=True)
     parser.add_argument("--train-percentage", type=float, default=0.7)
     parser.add_argument("--epochs", type=int, default=60)
-    parser.add_argument("--es-patience", type=int, default=4)
-    parser.add_argument("--es-threshold", type=float, default=0.1)
-    parser.add_argument("--scheduler-patience", type=int, default=4)
+    parser.add_argument("--es-patience", type=int, default=4) parser.add_argument("--es-threshold", type=float, default=0.1) parser.add_argument("--scheduler-patience", type=int, default=4)
     parser.add_argument("--scheduler-threshold", type=float, default=0.1)
     parser.add_argument("--load-checkpoint", type=bool, default=False)
     parser.add_argument("--model-name-kaggle", type=str, default=DEFAULT_MODEL_NAME)
@@ -83,6 +81,7 @@ async def main():
 
     progress_i = 0
     best_loss = float('inf')
+    last_loss = float('inf')
     model_weights = None
     early_stop_counter = 0
     starting_epoch = 0
@@ -94,6 +93,7 @@ async def main():
             checkpoint_data = json.load(checkpoint)
             starting_epoch = checkpoint_data["epoch"]
             best_loss = checkpoint_data["best_loss"]
+            last_loss = checkpoint_data["last_loss"]
             early_stop_counter = checkpoint_data["es_counter"]
             
             model_weights = checkpoint_data["weights"]
@@ -103,7 +103,7 @@ async def main():
             scheduler_data = torch.load(files_handler.scheduler_path)
             scheduler.load_state_dict(scheduler_data)
 
-            progress = pd.load_csv(files_handler.history_path)
+            progress = pd.read_csv(files_handler.history_path)
             progress_i = len(progress)
 
     
@@ -161,6 +161,17 @@ async def main():
         print("[*] Saving history")
         progress.to_csv(files_handler.history_path, index=False)
 
+        if last_loss == float('inf'):
+            last_loss = test_loss
+        
+        if abs(last_loss-test_loss) >= args.es_threshold:
+            print("[*] model has not evolved")
+            early_stop_counter += 1
+        else:
+            early_stop_counter = 0
+
+        last_loss = test_loss
+
         if test_loss < best_loss:
             print("[*] Saving model weights")
             best_loss = test_loss
@@ -168,17 +179,13 @@ async def main():
             model_weights = model_path
             torch.save(model.state_dict(), model_path)
 
-        if abs(best_loss-test_loss) > args.es_threshold:
-            print("[*] model has not evolved")
-            early_stop_counter += 1
-        else:
-            early_stop_counter = 0
 
         with open(files_handler.model_checkpoint_path, "w") as checkpoint:
             print("[*] Saving Checkpoint")
             json.dump({
                     "epoch": epoch+1, 
                     "best_loss": best_loss, 
+                    "last_loss": last_loss, 
                     "weights":model_weights,
                     "es_counter": early_stop_counter,
                 }, checkpoint)
@@ -187,6 +194,7 @@ async def main():
         if early_stop_counter >= args.es_patience:
             print("[*] Stopping earlier")
             break
+        
 
     print("[*] Evaluating GHZ")
     shutil.copy(model_weights, files_handler.final_model_path)

@@ -22,4 +22,4 @@ run-ghz:
 	python ghz.py --target-folder ./data
 
 run-model:
-	python model-dense.py --target-folder ./data --epochs 30 --load-checkpoint True
+	python model-dense.py --target-folder ./data --epochs 30 --load-checkpoint True --scheduler-patience 2
