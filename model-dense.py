@@ -24,7 +24,9 @@ async def main():
     parser.add_argument("--target-folder", type=str, required=True)
     parser.add_argument("--train-percentage", type=float, default=0.7)
     parser.add_argument("--epochs", type=int, default=60)
-    parser.add_argument("--es-patience", type=int, default=4) parser.add_argument("--es-threshold", type=float, default=0.1) parser.add_argument("--scheduler-patience", type=int, default=4)
+    parser.add_argument("--es-patience", type=int, default=4) 
+    parser.add_argument("--es-threshold", type=float, default=0.1) 
+    parser.add_argument("--scheduler-patience", type=int, default=4)
     parser.add_argument("--scheduler-threshold", type=float, default=0.1)
     parser.add_argument("--load-checkpoint", type=bool, default=False)
     parser.add_argument("--model-name-kaggle", type=str, default=DEFAULT_MODEL_NAME)
@@ -164,7 +166,7 @@ async def main():
         if last_loss == float('inf'):
             last_loss = test_loss
         
-        if abs(last_loss-test_loss) >= args.es_threshold:
+        if last_loss-test_loss <= args.es_threshold:
             print("[*] model has not evolved")
             early_stop_counter += 1
         else:
