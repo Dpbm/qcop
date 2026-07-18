@@ -31,6 +31,7 @@ class Files:
         self._model_checkpoint_path = os.path.join(base_folder, "checkpoint.json")
         self._history_path = os.path.join(base_folder, "history.csv")
         self._scheduler_path = os.path.join(base_folder, "scheduler.pt")
+        self._opt_path = os.path.join(base_folder, "opt.pt")
 
     @property
     def df_tmp_path(self) -> FilePath:
@@ -96,6 +97,11 @@ class Files:
     def scheduler_path(self) -> FilePath:
         """Scheduler Data Path"""
         return self._scheduler_path
+    
+    @property
+    def opt_path(self) -> FilePath:
+        """Optimizer Data Path"""
+        return self._opt_path
     
     @property
     def embeddings_shape_path(self) -> FilePath:

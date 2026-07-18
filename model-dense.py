@@ -76,7 +76,7 @@ async def main():
 
     print("-"*30)
     print("Training Model")
-    opt = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    opt = torch.optim.Adam(model.parameters())
     scheduler = ReduceLROnPlateau(opt, patience=args.scheduler_patience, threshold=args.scheduler_threshold)
 
     progress = pd.DataFrame(columns=("epoch", "loss", "iter", "output", "step"))
@@ -104,6 +104,9 @@ async def main():
             
             scheduler_data = torch.load(files_handler.scheduler_path)
             scheduler.load_state_dict(scheduler_data)
+            
+            opt_data = torch.load(files_handler.opt_path)
+            opt.load_state_dict(opt_data)
 
             progress = pd.read_csv(files_handler.history_path)
             progress_i = len(progress)
@@ -192,6 +195,7 @@ async def main():
                     "es_counter": early_stop_counter,
                 }, checkpoint)
             torch.save(scheduler.state_dict(), files_handler.scheduler_path)
+            torch.save(opt.state_dict(), files_handler.opt_path)
         
         if early_stop_counter >= args.es_patience:
             print("[*] Stopping earlier")
