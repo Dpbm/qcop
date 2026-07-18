@@ -166,10 +166,7 @@ async def main():
         print("[*] Saving history")
         progress.to_csv(files_handler.history_path, index=False)
 
-        if last_loss == float('inf'):
-            last_loss = test_loss
-        
-        if last_loss-test_loss <= args.es_threshold:
+        if last_loss != float('inf') and last_loss-test_loss <= args.es_threshold:
             print("[*] model has not evolved")
             early_stop_counter += 1
         else:
