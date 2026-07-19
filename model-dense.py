@@ -161,6 +161,9 @@ async def main():
                 loss = loss_fn(outputs, labels)
                 test_loss += loss.item()
 
+                if(i % 10 == 0):
+                    print("Current Test loss: ", test_loss/(i+1))
+
         print("Test Loss: ", test_loss, test_loss/len(test_loader))
 
         print("[*] Saving history")
