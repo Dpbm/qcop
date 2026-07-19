@@ -123,16 +123,21 @@ async def main():
 
             opt.zero_grad()
 
-            outputs = F.log_softmax(model(inputs), dim=1)
+            outputs = model(inputs)
+            outputs_softmax = F.log_softmax(outputs, dim=1)
+            loss = loss_fn(outputs_softmax, labels)
 
-            loss = loss_fn(outputs, labels)
+            print("input: ", inputs[0])
+            print("output: ", outputs[0])
+            print("expected: ", labels[0])
+            print("pred: ", outputs_softmax[0])
+
             loss.backward()
 
             opt.step()
             
             loss_step = loss.item()
 
-            scheduler.step(loss_step)
 
             epoch_loss += loss_step
             progress.loc[progress_i] = {
@@ -148,6 +153,8 @@ async def main():
                 print("Current loss: ", epoch_loss/(i+1))
 
         print("Train Loss: ", epoch_loss, epoch_loss/len(train_loader))
+        print("LR:", opt.param_groups[0]["lr"])
+        scheduler.step(epoch_loss/len(train_loader))
 
         model.eval()
         
@@ -157,9 +164,19 @@ async def main():
                 inputs = data[0].to(device)
                 labels = data[1].to(device)
 
-                outputs = F.log_softmax(model(inputs), dim=1)
-                loss = loss_fn(outputs, labels)
+                outputs = model(inputs)
+                outputs_softmax = F.log_softmax(outputs,dim=1)
+                loss = loss_fn(outputs_softmax, labels)
+
+                print("input: ", inputs[0])
+                print("output: ", outputs[0])
+                print("expected: ", labels[0])
+                print("pred: ", outputs_softmax[0])
+
                 test_loss += loss.item()
+
+                probs = outputs.exp()
+                print("probs: ", probs[0])
 
                 if(i % 10 == 0):
                     print("Current Test loss: ", test_loss/(i+1))
