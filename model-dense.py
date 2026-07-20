@@ -1,9 +1,11 @@
+from typing import Callable, Dict, Any
 import argparse
 import shutil
 from functools import reduce
 import json
 import asyncio
 import os
+import warnings
 
 from tqdm import trange
 import pandas as pd
@@ -15,14 +17,138 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from utils.constants import DEFAULT_RANDOM_SEED, DEFAULT_MODEL_NAME
 from generate.dataset.files import Files
+from utils.datatypes import FilePath
 from dataset import Data
 from export import export_model_parallel
+
+warnings.simplefilter("ignore", pd.errors.PerformanceWarning)
+
+class Progress:
+    def __init__(self):
+        self._data = pd.DataFrame(columns=("epoch", "loss", "iter", "output", "step"))
+        self._i = 0
+
+    def append_row(self, row:Dict[str,Any]) -> None:
+        self._data.loc[self._i] = row
+        self._i += 1
+    
+    def export(self, path:FilePath) -> None:
+        print("[*] Saving progress history")
+        progress.to_csv(path, index=False)
+
+    def load(self, path) -> None:
+        print("[*] Loading history")
+        self._data = pd.read_csv(path) 
+        self._i = len(self._data)
+
+
+def eval_data(
+        dataset:DataLoader, 
+        model:nn.Sequential,
+        device:str,
+        progress:Progress,
+        loss_fn:nn.KLDivLoss,
+        epoch: int,
+        label: str="test"
+    ) -> float:
+
+    model.eval()
+    general_loss = 0
+
+    with torch.no_grad():
+        for i, data in enumerate(dataset):
+            inputs = data[0].to(device)
+            labels = data[1].to(device)
+
+            outputs = model(inputs)
+            outputs_softmax = F.log_softmax(outputs,dim=1)
+
+            loss = loss_fn(outputs_softmax, labels)
+            loss_step = loss.item()
+            general_loss += loss_step
+
+            probs = outputs_softmax.exp()
+            progress.append_row({
+                    "epoch": epoch,
+                    "loss": loss_step,
+                    "iter": i,
+                    "output": str(probs.tolist()),
+                    "step": label
+                })
+
+            if(i % 10 == 0):
+                print("*"*30)
+                print("i: ", i)
+                print("input: ", inputs[0])
+                print("output: ", outputs[0])
+                print("expected: ", labels[0])
+                print("pred: ", outputs_softmax[0])
+                print("probs: ", probs[0])
+                print("Current loss: ", general_loss/(i+1))
+                print("*"*30)
+
+    avg_loss = general_loss/len(dataset)
+    print("Final Loss: ", general_loss, avg_loss)
+    return avg_loss
+
+def train_epoch(
+        dataset:DataLoader, 
+        model:nn.Sequential,
+        device:str,
+        progress:Progress,
+        loss_fn:nn.KLDivLoss,
+        opt:torch.optim.Adam,
+        epoch: int,
+    ) -> None:
+    general_loss = 0
+    model.train(True)
+
+    for i, data in enumerate(dataset):
+        inputs = data[0].to(device)
+        labels = data[1].to(device)
+
+        opt.zero_grad()
+
+        outputs = model(inputs)
+        outputs_softmax = F.log_softmax(outputs, dim=1)
+        probs = outputs_softmax.exp()
+        loss = loss_fn(outputs_softmax, labels)
+        loss.backward()
+
+        opt.step()
+        
+        loss_step = loss.item()
+        general_loss += loss_step
+
+        progress.append_row({
+                "epoch": epoch,
+                "loss": loss_step,
+                "iter": i,
+                "output": str(probs.tolist()),
+                "step": "train"
+            })
+
+        if(i % 10 == 0):
+            print("-"*30)
+            print("i: ", i)
+            print("input: ", inputs[0])
+            print("output: ", outputs[0])
+            print("expected: ", labels[0])
+            print("pred: ", outputs_softmax[0])
+            print("probs: ", probs[0])
+            print("Current loss: ", general_loss/(i+1))
+            print("-"*30)
+
+    avg_loss = general_loss/len(dataset)
+    print("Train Loss: ", general_loss, avg_loss)
+    print("LR:", opt.param_groups[0]["lr"])
 
 async def main():
     parser = argparse.ArgumentParser(description="Train Dense Model")
     parser.add_argument("--batch-size", type=int, default=512)
     parser.add_argument("--target-folder", type=str, required=True)
     parser.add_argument("--train-percentage", type=float, default=0.7)
+    parser.add_argument("--test-percentage", type=float, default=0.2)
     parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--es-patience", type=int, default=4) 
     parser.add_argument("--es-threshold", type=float, default=0.1) 
@@ -53,7 +179,6 @@ async def main():
     model = nn.Sequential(
                 nn.Flatten(),
                 nn.Linear(total_neurons_input, first_hidden_size),
-                nn.BatchNorm1d(first_hidden_size),
                 nn.GELU(),
                 nn.Dropout(0.3),
                 nn.Linear(first_hidden_size, second_hidden_size),
@@ -63,14 +188,22 @@ async def main():
     
 
     data = Data(files_handler.csv_file_path, files_handler.embeddings_path)
-    train_size = int(args.train_percentage * len(data))
-    test_size = len(data) - train_size
+    data_size = len(data)
+    train_size = int(args.train_percentage * data_size)
+    test_size = int(args.test_percentage * data_size)
+    eval_size = data_size - train_size - test_size
 
-    train_dataset, test_dataset = random_split(
-            data, [train_size, test_size], 
+    print("[*] dataset size: ", data_size)
+    print("[*] train size: ", train_size)
+    print("[*] test size: ", test_size)
+    print("[*] eval size: ", eval_size)
+
+    train_dataset, test_dataset, eval_dataset  = random_split(
+            data, [train_size, test_size, eval_size], 
             generator=torch.Generator().manual_seed(DEFAULT_RANDOM_SEED))
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True)
+    eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
     loss_fn = nn.KLDivLoss(reduction="batchmean")
 
@@ -79,9 +212,7 @@ async def main():
     opt = torch.optim.Adam(model.parameters())
     scheduler = ReduceLROnPlateau(opt, patience=args.scheduler_patience, threshold=args.scheduler_threshold)
 
-    progress = pd.DataFrame(columns=("epoch", "loss", "iter", "output", "step"))
-
-    progress_i = 0
+    progress = Progress()
     best_loss = float('inf')
     last_loss = float('inf')
     model_weights = None
@@ -108,83 +239,16 @@ async def main():
             opt_data = torch.load(files_handler.opt_path)
             opt.load_state_dict(opt_data)
 
-            progress = pd.read_csv(files_handler.history_path)
-            progress_i = len(progress)
-
+            progress.load(files_handler.history_path)
+    
     
     for epoch in trange(starting_epoch, args.epochs):
-        epoch_loss = 0
+        train_epoch(train_loader, model, device, progress, loss_fn, opt, epoch)  
 
-        model.train(True)
-
-        for i, data in enumerate(train_loader):
-            inputs = data[0].to(device)
-            labels = data[1].to(device)
-
-            opt.zero_grad()
-
-            outputs = model(inputs)
-            outputs_softmax = F.log_softmax(outputs, dim=1)
-            loss = loss_fn(outputs_softmax, labels)
-
-            print("input: ", inputs[0])
-            print("output: ", outputs[0])
-            print("expected: ", labels[0])
-            print("pred: ", outputs_softmax[0])
-
-            loss.backward()
-
-            opt.step()
-            
-            loss_step = loss.item()
-
-
-            epoch_loss += loss_step
-            progress.loc[progress_i] = {
-                    "epoch": epoch,
-                    "loss": loss_step,
-                    "iter": i,
-                    "output": str(outputs.tolist()),
-                    "step": "train"
-                }
-            progress_i += 1
-
-            if(i % 10 == 0):
-                print("Current loss: ", epoch_loss/(i+1))
-
-        print("Train Loss: ", epoch_loss, epoch_loss/len(train_loader))
-        print("LR:", opt.param_groups[0]["lr"])
-        scheduler.step(epoch_loss/len(train_loader))
-
-        model.eval()
-        
-        test_loss = 0
-        with torch.no_grad():
-            for i, data in enumerate(test_loader):
-                inputs = data[0].to(device)
-                labels = data[1].to(device)
-
-                outputs = model(inputs)
-                outputs_softmax = F.log_softmax(outputs,dim=1)
-                loss = loss_fn(outputs_softmax, labels)
-
-                print("input: ", inputs[0])
-                print("output: ", outputs[0])
-                print("expected: ", labels[0])
-                print("pred: ", outputs_softmax[0])
-
-                test_loss += loss.item()
-
-                probs = outputs.exp()
-                print("probs: ", probs[0])
-
-                if(i % 10 == 0):
-                    print("Current Test loss: ", test_loss/(i+1))
-
-        print("Test Loss: ", test_loss, test_loss/len(test_loader))
-
-        print("[*] Saving history")
-        progress.to_csv(files_handler.history_path, index=False)
+        print("------EVAL Test-------")
+        test_loss = eval_data(test_loader, model, device, progress, loss_fn, epoch)
+        scheduler.step(test_loss)
+        progress.export(files_handler.history_path)
 
         if last_loss != float('inf') and last_loss-test_loss <= args.es_threshold:
             print("[*] model has not evolved")
@@ -218,15 +282,17 @@ async def main():
             print("[*] Stopping earlier")
             break
         
-
-    print("[*] Evaluating GHZ")
     shutil.copy(model_weights, files_handler.final_model_path)
-
     state_dict = torch.load(model_weights, map_location=device)
     model.load_state_dict(state_dict)
+    
+    print("-------EVAL Model----------")
+    eval_data(eval_loader, model, device, progress, loss_fn, -1, label="eval")
+    progress.export(files_handler.history_path)
 
-    model.eval()
+    print("[*] Evaluating GHZ")
     ghz = torch.load(files_handler.ghz_path, map_location=device)
+    model.eval()
     with torch.no_grad():
         output = F.softmax(model(ghz), dim=1)
     print("GHZ prediction: ", output)
