@@ -1,14 +1,15 @@
 """Generate GHZ circuit"""
-import os
 import argparse
 
 from qiskit import QuantumCircuit
 from PIL import Image
 import torch
+from transformers import pipeline
+from accelerate import Accelerator
+import numpy as np
 
 from utils.image import transform_image
-from args.parser import parse_args
-from utils.constants import SCALE_CIRCUIT_SIZE, DEFAULT_NUM_QUBITS, DEFAULT_TARGET_FOLDER
+from utils.constants import SCALE_CIRCUIT_SIZE, DEFAULT_NUM_QUBITS, DEFAULT_TARGET_FOLDER, MODEL
 from utils.datatypes import FilePath, Dimensions
 
 from generate.dataset.files import Files
@@ -16,8 +17,6 @@ from generate.dataset.images import Images
 
 def gen_circuit(n_qubits: int, target_folder: FilePath):
     files_handler = Files(target_folder)
-    if os.path.exists(files_handler.ghz_path) and os.path.exists(files_handler.ghz_image_path):
-        return
 
     qc = QuantumCircuit(n_qubits)
     qc.h(0)
@@ -37,8 +36,8 @@ def gen_circuit(n_qubits: int, target_folder: FilePath):
             model=MODEL, device=device)
     
     with Image.open(files_handler.ghz_image_path) as file:
-        tensor = Image.fromarray(Images._transform_image(file))
-        embedding = np.array(pipe(preloaded_images), dtype=np.float16)
+        tensor = Image.fromarray(Images._transform_image(file).numpy())
+        embedding = np.array(pipe(tensor), dtype=np.float16)
 
     print("[*] saving GHZ embedding")
     torch.save(embedding, files_handler.ghz_path)
@@ -48,4 +47,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-qubits", type=int, default=DEFAULT_NUM_QUBITS)
     parser.add_argument("--target-folder", type=str, required=True)
+    args = parser.parse_args()
     gen_circuit(args.n_qubits, args.target_folder)

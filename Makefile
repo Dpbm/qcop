@@ -22,6 +22,7 @@ run-ghz:
 	python ghz.py --target-folder ./data
 
 run-model:
-	PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python model-dense.py --target-folder ./data --epochs 30 --load-checkpoint True --scheduler-patience 2 --batch-size 100
+	PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python model_dense.py --target-folder ./data --epochs 30 --load-checkpoint True --scheduler-patience 2 --batch-size 100
 
-
+run-ghz-eval:
+	python eval-ghz.py --target-folder ./data
