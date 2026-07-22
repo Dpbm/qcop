@@ -12,6 +12,10 @@ clean-embeddings:
 	@echo "Deleting embeddings data..."
 	rm -rf ./data/*embedding*
 
+clean-model:
+	@echo "Deleting model files..."
+	rm -rf ./data/checkpoint.json ./data/history.csv ./data/model_* ./data/*.pt final_model.safetensors
+
 run-dataset:
 	python create-dataset.py --target-folder ./data --threads 20 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
 

@@ -17,14 +17,15 @@ class Data(Dataset):
         self._df = _df_handler.load_lazy_frame()
         self._dataset = h5py.File(images_path, "r")
         self._size = len(self._dataset)
+        self._max_index = self._df.select(pl.col("index").max()).collect().item()
 
     def __len__(self):
         return self._size
 
     def __getitem__(self, index) -> Tuple[torch.Tensor, torch.Tensor]:
-        current_index = 0
+        current_index = index
         while True:
-            if(current_index > self._size-1):
+            if(current_index > self._max_index):
                 raise IndexError("Index %d does not exist in the dataset"%(current_index))
 
             df_row = self._df.filter(pl.col("index") == current_index).collect()
