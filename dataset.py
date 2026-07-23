@@ -18,6 +18,7 @@ class Data(Dataset):
         self._dataset = h5py.File(images_path, "r")
         self._size = len(self._dataset)
         self._max_index = self._df.select(pl.col("index").max()).collect().item()
+        print(self._max_index, max(list(map(int, list(self._dataset.keys())))))
 
     def __len__(self):
         return self._size

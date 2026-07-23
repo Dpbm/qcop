@@ -243,7 +243,9 @@ class Images:
             collected_rows: List[FilePath] = (
                 df.slice(offset=current_index, length=amount_of_rows_per_iteration)
                 .collect()
-                .get_column("file")
+                .concat_list("file", "index")
+                .alias("file_index")
+                .get("file_index")
                 .to_list()
             )
 
@@ -252,10 +254,10 @@ class Images:
             
             # multiple threads can't write the same file, so no threads
             with h5py.File(h5_file_path, "a") as file:
-                for image_path in tqdm(collected_rows):
+                for image_path,img_index in tqdm(collected_rows):
                     with Image.open(image_path) as img:
                         tensor = Images._transform_image(img)
-                        file.create_dataset(f"{current_index}", data=tensor)
+                        file.create_dataset(f"{img_index}", data=tensor)
                         callback()
                         current_index += 1
 

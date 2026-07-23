@@ -11,7 +11,6 @@ from utils.datatypes import FilePath
 class Stages(Enum):
     """Enum for dataset generation stages"""
     GEN_IMAGES = "gen"
-    SHUFFLE = "shuffle"
     CLEAN = "clean"
     TRANSFORM = "transform"
     EXPORT = "export"
@@ -69,9 +68,6 @@ class Checkpoint:
     def next_stage(self):
         """Move state to the new stage"""
         if self._stage == Stages.GEN_IMAGES:
-            self._stage = Stages.SHUFFLE
-
-        elif self._stage == Stages.SHUFFLE:
             self._stage = Stages.CLEAN
 
         elif self._stage == Stages.CLEAN:

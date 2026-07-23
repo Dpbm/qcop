@@ -20,7 +20,6 @@ from utils.constants import (
     DEFAULT_DATASET_NAME
 )
 
-
 def update_rows_callback(rows:Rows, checkpoint:Checkpoint, df:DF, inc: int):
     df.append_rows_to_file(rows)
     checkpoint.index += inc
@@ -58,14 +57,6 @@ async def main(args:argparse.Namespace):
                 checkpoint,
                 current_index=checkpoint.index
             )
-        checkpoint.next_stage()
-        checkpoint.save()
-
-    if checkpoint.stage == Stages.SHUFFLE:
-        print("[*] Shuffling dataset...")
-        df_data = df.load_dataframe()
-        shuffled_dataset = df.shuffle_df(df_data)
-        df.save_df(shuffled_dataset)
         checkpoint.next_stage()
         checkpoint.save()
     

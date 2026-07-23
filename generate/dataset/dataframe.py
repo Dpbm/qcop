@@ -81,10 +81,6 @@ class DF:
         csv = pl.read_csv(self._df_path)
         return csv.cast(DF.df_schema)
 
-    def shuffle_df(self, df:pl.DataFrame) -> pl.DataFrame:
-        """Shuffles the dataframe."""
-        return df.sample(fraction=1.0, shuffle=True, seed=self._seed)
-
     def append_rows_to_file(self, rows: Rows):
         """
         Use python's built-in csv library to append rows into a file
