@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import os
+import sys
 
 from utils.colors import Colors
 from generate.dataset.dataframe import DF
@@ -55,7 +56,7 @@ async def main(args:argparse.Namespace):
                 lambda rows,inc: update_rows_callback(rows, checkpoint, df, inc),
                 args.threads,
                 checkpoint,
-                current_index=checkpoint.index
+                circuit_format_counter=checkpoint.index
             )
         checkpoint.next_stage()
         checkpoint.save()
@@ -71,8 +72,8 @@ async def main(args:argparse.Namespace):
         dont_exist = Files.remove_duplicated_files(duplicated_files)
         clean_df = DF.remove_rows_with_non_existant_files(clean_df, dont_exist)
 
-        clean_df = DF.keep_25_to_75_quantiles_by_depth(clean_df)
-        discard_outliers_files = DF.get_files_via_left_join(lazy_df, clean_df)
+#         clean_df = DF.keep_25_to_75_quantiles_by_depth(clean_df)
+#         discard_outliers_files = DF.get_files_via_left_join(lazy_df, clean_df)
         
         dont_exist = Files.remove_duplicated_files(duplicated_files)
         clean_df = DF.remove_rows_with_non_existant_files(clean_df, dont_exist)
@@ -121,14 +122,11 @@ if __name__ == "__main__":
         )
         parser.add_argument("--target-folder", type=str, required=True)
 
-    if len(sys.argv) <= 2:
-        parser.print_usage()
-        exit()
-        
+        if len(sys.argv) <= 2:
+            parser.print_usage()
+            exit()
+            
         args = parser.parse_args()
-        parsed_arguments = ArgumentsGenerate()
-        parsed_arguments.parse(args)
-
         asyncio.run(main(args))
     except KeyboardInterrupt:
         exit()

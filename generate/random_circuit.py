@@ -1,82 +1,100 @@
 """Generate random circuits by hand"""
 
-import random
-from math import pi
-from abc import ABC, abstractmethod
+from typing import List
 
 from qiskit import QuantumCircuit
-from qiskit.circuit import Gate as QiskitGate
-from qiskit.circuit.library import (
-    ZGate,
-    XGate,
-    HGate,
-    RYGate,
-    CXGate,
-    CZGate,
-    IGate
-)
+from qiskit.circuit.library import RYGate, XGate, ZGate, HGate, IGate, CXGate, CZGate, SwapGate
 
-class Gate(ABC):
-    """interface for gates"""
+import numpy as np
 
-    @classmethod
-    @abstractmethod
-    def get_random_gate(cls) -> QiskitGate:
-        pass
+from utils.constants import DEFAULT_RANDOM_SEED
 
+class RandomCircuit:
+    """Code based on https://github.com/Qiskit/qiskit/blob/stable/2.5/qiskit/circuit/random/utils.py#L685-L753"""
 
-class SingleQubitGate(Gate):
-    """Handle single qubit gates"""
+    def __init__(self, seed:int=37):
+        self._all_gates = {
+            'x': lambda  : XGate(),
+            'z': lambda : ZGate(),
+            'h': lambda : HGate(),
+            'id': lambda : IGate(),
+            'cx': lambda : CXGate(),
+            'cz': lambda : CZGate(),
+            'swap': lambda : SwapGate(),
+            'ry':lambda theta: RYGate(theta)
+        }
+        self._two_qubit = ['cx', 'cz', 'swap']
+        self._with_parameters = ['ry']
 
-    rotation_gates = [RYGate]
-    simple_gates = [ZGate, XGate, HGate, IGate]
-    all_gates = [*rotation_gates, *simple_gates]
+        self._low_param = 0
+        self._high_param = 2*np.pi
 
-    @classmethod
-    def get_random_gate(cls) -> QiskitGate:
-        """Return an instance of a single qubit gate ready to use"""
-        gate = random.choice(cls.all_gates)
+        self._rng = np.random.default_rng(seed)
 
-        if gate in cls.rotation_gates:
-            param = random.uniform(0, 2 * pi)
-            return gate(param)
+    def _get_angle(self) -> float:
+        return self._rng.uniform(low=self._low_param,high=self._high_param,size=None)
 
-        return gate()
+    def _gate_num_qubits(self, gate:str) -> int:
+        return int(gate in self._two_qubit)+1
 
+    def _get_random_gates(self,num_gates:int)-> list[str]:
+        return self._rng.choice(list(self._all_gates.keys()), num_gates)
 
-class MultiQubitGate(Gate):
-    """Handle multi qubit gates"""
+    def _add_to_circuit(self, gates:List[str], qc:QuantumCircuit) -> None:
+        num_qubits = qc.num_qubits
+        for gate in gates:
+            pos = self._rng.choice(range(num_qubits), self._gate_num_qubits(gate), replace=False).tolist()
+            qc.append(
+                self._all_gates[gate]()
+                if gate not in self._with_parameters
+                else self._all_gates[gate](self._get_angle())
+            , pos, copy=False)
 
-    gates = [CXGate, CZGate]
-
-    @classmethod
-    def get_random_gate(cls) -> QiskitGate:
-        """Return an instance of a multi-qubit gate ready to use"""
-        gate = random.choice(cls.gates)
-        return gate()
-
-def generate_circuit(n_qubits:int, total_gates:int) -> QuantumCircuit:
-    """Generate a circuit based on the amount of gates"""
-    qc = QuantumCircuit(n_qubits)
-
-    for _ in range(total_gates):
-        if random.random() < 0.5:
-            qubit = [random.randint(0, n_qubits - 1)]
-            gate = SingleQubitGate.get_random_gate()
-            qc.append(gate, qubit)
-        else:
-            qubits = random.sample(range(n_qubits), 2)
-            gate = MultiQubitGate.get_random_gate()
-            qc.append(gate, qubits)
-
-        if random.random() < 0.1:
+    def _add_barrier_at_the_end(self,qc:QuantumCircuit) -> None:
+        if self._rng.random() <= 0.3:
             qc.barrier()
 
-    return qc
+    def get_random_circuit(self, num_gates:int, num_qubits:int, add_barrier:bool=True, max_layers:int=5, min_layers:int=0) -> QuantumCircuit:
+        qc = QuantumCircuit(num_qubits)
+
+        gates = self._get_random_gates(num_gates)
+        num_layers = self._rng.integers(min_layers,max_layers,1)[0]
+
+        if not num_layers:
+            self._add_to_circuit(gates, qc)
+            self._add_barrier_at_the_end(qc)
+
+        else:
+            c = num_gates
+
+            for _ in range(num_layers):
+                layer_gates = self._rng.integers(0,c,1)[0]
+                if not layer_gates:
+                    continue
+
+                selected_gates = self._rng.choice(gates,layer_gates,replace=False).tolist()
+                self._add_to_circuit(selected_gates, qc)
+                c -= len(selected_gates)
+
+                if c <= 0:
+                    self._add_barrier_at_the_end(qc)
+                    break
+
+                qc.barrier()
+
+            if c > 0:
+                selected_gates = self._rng.choice(gates,c,replace=False).tolist()
+                self._add_to_circuit(selected_gates, qc)
+                self._add_barrier_at_the_end(qc)
+
+
+        return qc
+
+
 
 def get_random_circuit(n_qubits: int, total_gates: int) -> QuantumCircuit:
     """Generate a random circuit based on the amount of qubits and gates."""
-
-    total_gates = random.randint(0, total_gates)
-    return generate_circuit(n_qubits,total_gates)
+    rc = RandomCircuit(seed=DEFAULT_RANDOM_SEED)
+    total_gates = np.random.randint(0, total_gates)
+    return rc.get_random_circuit(total_gates, n_qubits, max_layers=total_gates)
 

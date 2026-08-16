@@ -91,15 +91,15 @@ class Images:
         callback:Callable,
         total_threads: int,
         checkpoint:Checkpoint,
-        current_index:int=0,
+        circuit_format_counter:int=0,
     ):
         """Generate the images split into threads."""
 
         measurement_combs = Images._get_combinations_of_measurements(n_qubits)
         total_measurement_combs = len(measurement_combs)
 
-        with tqdm(total=amount_circuits, initial=current_index) as progress:
-            while current_index < amount_circuits:
+        with tqdm(total=amount_circuits, initial=circuit_format_counter) as progress:
+            while circuit_format_counter < amount_circuits:
                 args = []
 
                 has_thread_indexes = len(checkpoint.thread_indexes) > 0
@@ -108,7 +108,7 @@ class Images:
                     args.append(
                         (
                             i,
-                            (current_index + i) * total_measurement_combs,
+                            (circuit_format_counter * total_measurement_combs) + (i * total_measurement_combs),
                             measurement_combs,
                             n_qubits,
                             total_gates,
@@ -130,7 +130,7 @@ class Images:
                         try:
                             future_rows = [list(result.values())  for result in future.result()]
                             rows = [*rows, *future_rows]
-                            current_index += 1
+                            circuit_format_counter += 1
                             progress.update(1)
                         except Exception as error:
                             print("Error: %s" % error)
@@ -240,14 +240,7 @@ class Images:
         amount_of_rows_per_iteration = 2000
 
         while True:
-            collected_rows: List[FilePath] = (
-                df.slice(offset=current_index, length=amount_of_rows_per_iteration)
-                .collect()
-                .concat_list("file", "index")
-                .alias("file_index")
-                .get("file_index")
-                .to_list()
-            )
+            collected_rows = df.slice(offset=current_index, length=amount_of_rows_per_iteration).select(["file", "index"]).collect().to_numpy().tolist()
 
             if len(collected_rows) <= 0:
                 break
