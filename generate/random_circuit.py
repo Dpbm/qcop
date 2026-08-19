@@ -32,7 +32,7 @@ class RandomCircuit:
         self._rng = np.random.default_rng(seed)
 
     def _get_angle(self) -> float:
-        return self._rng.uniform(low=self._low_param,high=self._high_param,size=None)
+        return self._rng.uniform(low=self._low_param, high=self._high_param, size=None)
 
     def _gate_num_qubits(self, gate:str) -> int:
         return int(gate in self._two_qubit)+1
@@ -55,6 +55,8 @@ class RandomCircuit:
             qc.barrier()
 
     def get_random_circuit(self, num_gates:int, num_qubits:int, add_barrier:bool=True, max_layers:int=5, min_layers:int=0) -> QuantumCircuit:
+
+        assert max_layers > min_layers, "Invalid amount of layers!"
         qc = QuantumCircuit(num_qubits)
 
         gates = self._get_random_gates(num_gates)
@@ -68,11 +70,14 @@ class RandomCircuit:
             c = num_gates
 
             for _ in range(num_layers):
+                if c <= 0:
+                    break
+
                 layer_gates = self._rng.integers(0,c,1)[0]
                 if not layer_gates:
                     continue
 
-                selected_gates = self._rng.choice(gates,layer_gates,replace=False).tolist()
+                selected_gates = self._rng.choice(gates, layer_gates, replace=False).tolist()
                 self._add_to_circuit(selected_gates, qc)
                 c -= len(selected_gates)
 
@@ -96,5 +101,5 @@ def get_random_circuit(n_qubits: int, total_gates: int) -> QuantumCircuit:
     """Generate a random circuit based on the amount of qubits and gates."""
     rc = RandomCircuit(seed=DEFAULT_RANDOM_SEED)
     total_gates = np.random.randint(0, total_gates)
-    return rc.get_random_circuit(total_gates, n_qubits, max_layers=total_gates)
+    return rc.get_random_circuit(total_gates, n_qubits)
 
