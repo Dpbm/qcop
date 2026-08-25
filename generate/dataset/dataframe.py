@@ -94,15 +94,14 @@ class DF:
     @staticmethod
     def clean_duplicated_rows(df:pl.LazyFrame) -> pl.LazyFrame:
         """Clean Df duplicated rows based on filepath and hash."""
-        clean_df = df.filter(pl.col("file").is_first_distinct())
-        clean_df = clean_df.filter(pl.col("hash").is_first_distinct())
-        return clean_df
+        return df.filter(pl.col("file").is_first_distinct()).filter(pl.col("hash").is_first_distinct())
 
     @staticmethod
     def get_files_via_left_join(left:pl.LazyFrame, right:pl.LazyFrame) -> List[str]:
         """Get the files that are on the left LazyFrame by applying a df diff."""
         duplicated_files = (
             left.join(right, on=left.collect_schema().names(), how="anti")
+            .select("file")
             .collect()
             .get_column("file")
         )

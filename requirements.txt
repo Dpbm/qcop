@@ -20,3 +20,5 @@ huggingface_hub
 lark
 cupy-cuda12x
 nbconvert
+transformers
+accelerate

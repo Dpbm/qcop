@@ -17,7 +17,7 @@ clean-model:
 	rm -rf ./data/checkpoint.json ./data/history.csv ./data/model_* ./data/*.pt final_model.safetensors
 
 run-dataset:
-	python create-dataset.py --target-folder ./data --threads 20 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
+	[[ ! -d ./data ]] && mkdir -p ./data ; python create-dataset.py --target-folder ./data --threads 20 --max-gates 40 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
 
 run-embeddings:
 	accelerate launch embeddings.py --target-folder ./data --batch-size 100 --preload-amount 500 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"

@@ -63,7 +63,8 @@ async def main(args:argparse.Namespace):
     
     if checkpoint.stage == Stages.CLEAN:
         print("[*] Cleaning Data...")
-        DF.run_statistics_notebook(files_handler.pre_analysis_path)
+        exit()
+#        DF.run_statistics_notebook(files_handler.pre_analysis_path)
 
         lazy_df = df.load_lazy_frame()
         clean_df = DF.clean_duplicated_rows(lazy_df)
@@ -81,7 +82,7 @@ async def main(args:argparse.Namespace):
         df.lazy_save_to_tmp(clean_df, files_handler.df_tmp_path)
         files_handler.move_tmp_to_definitive()
         
-        DF.run_statistics_notebook(files_handler.post_analysis_path)
+#        DF.run_statistics_notebook(files_handler.post_analysis_path)
 
         checkpoint.next_stage()
         checkpoint.save()
