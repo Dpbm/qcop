@@ -14,3 +14,4 @@ data/
 .idea
 .ipynb_checkpoints/
 *.swp
+!model_dense.py
