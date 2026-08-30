@@ -1,6 +1,6 @@
 """Generate random circuits by hand"""
 
-from typing import List
+from typing import List, Optional
 
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import RYGate, XGate, ZGate, HGate, IGate, CXGate, CZGate, SwapGate

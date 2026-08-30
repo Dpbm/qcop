@@ -16,6 +16,10 @@ clean-model:
 	@echo "Deleting model files..."
 	rm -rf ./data/checkpoint.json ./data/history.csv ./data/model_* ./data/*.pt final_model.safetensors
 
+clean-h5:
+	@echo "Deleting h5 files..."
+	rm -rf ./data/*.h5
+
 run-dataset:
 	[[ ! -d ./data ]] && mkdir -p ./data ; python create-dataset.py --target-folder ./data --threads 20 --max-gates 40 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
 

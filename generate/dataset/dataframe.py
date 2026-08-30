@@ -76,6 +76,21 @@ class DF:
        csv = pl.scan_csv(self._df_path)
        return csv.cast(DF.df_schema)
 
+    def load_lazy_frame_fix_index_col(self) -> pl.LazyFrame:
+       """
+       Opens csv file inside a lazy frame object but with fixed indexing column.
+       the idea is to make it simpler for the dataset load later, and to avoid 
+       misindexing while creating the embeddings and h5 files.
+       """
+       csv = (
+            pl.scan_csv(self._df_path)
+                .drop("index")
+                .sort("file")
+                .with_row_index(name="index", offset=0)
+       )
+       return csv.cast(DF.df_schema)
+
+
     def load_dataframe(self) -> pl.DataFrame:
         """Opens csv file into a dataframe object."""
         csv = pl.read_csv(self._df_path)

@@ -63,7 +63,6 @@ async def main(args:argparse.Namespace):
     
     if checkpoint.stage == Stages.CLEAN:
         print("[*] Cleaning Data...")
-        exit()
 #        DF.run_statistics_notebook(files_handler.pre_analysis_path)
 
         lazy_df = df.load_lazy_frame()
@@ -89,7 +88,8 @@ async def main(args:argparse.Namespace):
 
     if checkpoint.stage == Stages.TRANSFORM:
         print("[*] Transforming images (%d)..." % checkpoint.index)
-        clean_df = df.load_lazy_frame()
+        clean_df = df.load_lazy_frame_fix_index_col()
+        df.lazy_save(clean_df) # save the df to ensure the sequence
         img_handler.transform_images(
                 files_handler.h5_file_path, 
                 clean_df, 
