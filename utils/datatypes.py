@@ -1,9 +1,6 @@
 """Common datatypes"""
 
-from typing import Tuple
-import polars as pl
+from typing import List,Dict,Any
 
 FilePath = str
-Dimensions = Tuple[int, int]
-
-# Polars dataframe schema
+DFRows = List[Dict[str,Any]]

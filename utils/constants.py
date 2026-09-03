@@ -6,24 +6,28 @@ import time
 
 MODEL = "google/vit-base-patch16-384"
 
-
-# ----- RANDOMNESS --------
-DEFAULT_RANDOM_SEED = 32
-
 DEFAULT_DATASET_NAME="dqcop"
 DEFAULT_MODEL_NAME="qcop"
+
+DEFAULT_RANDOM_SEED = 32
 
 DEFAULT_EPOCHS = 60
 
 DEFAULT_SHOTS = 1000
 DEFAULT_NUM_QUBITS = 5
 DEFAULT_MAX_TOTAL_GATES = 20
-
 DEFAULT_THREADS = 10
+DEFAULT_AMOUNT_OF_CIRCUITS = 2000  # this one doesn't reflect exactly the size of the dataset, once the dataset might get either bigger, due to the different combinations of mesurements, or smaller due to duplicated circuits
+
+SCALE_CIRCUIT_SIZE = 0.5
+
+DATASET_FILE = "dataset.csv"
+IMAGES_PATH = "images"
+
+# ----- RANDOMNESS --------
 
 DEFAULT_BATCH_SIZE = 10
 
-DEFAULT_AMOUNT_OF_CIRCUITS = 2000  # this one doesn't reflect exactly the size of the dataset, once the dataset might get either bigger, due to the different combinations of mesurements, or smaller due to duplicated circuits
 
 DEFAULT_TARGET_FOLDER = "."
 
@@ -40,26 +44,3 @@ CHECKPOINT_FILE_PREFIX = "checkpoint_"
 
 DEFAULT_EARLY_STOP_PATIENCE=5
 DEFAULT_EARLY_STOP_THRESHOLD=0.01
-
-SCALE_CIRCUIT_SIZE = 0.5
-
-# ruff: noqa: E731
-dataset_images_path = lambda target_folder: os.path.join(target_folder, "dataset")
-dataset_file_path = lambda target_folder: os.path.join(target_folder, "dataset.csv")
-
-dataset_file_tmp = lambda target_folder: os.path.join(target_folder, "dataset-tmp.csv")
-images_h5_file = lambda target_folder: os.path.join(target_folder, "images.h5")
-ghz_file = lambda target_folder: os.path.join(target_folder, "ghz.pth")
-ghz_image_file = lambda target_folder: os.path.join(target_folder, "ghz.jpeg")
-ghz_pred_file = lambda target_folder: os.path.join(target_folder, "ghz-prediction.pth")
-ghz_image_file = lambda target_folder: os.path.join(target_folder, "ghz.jpeg")
-history_file = lambda target_folder: os.path.join(target_folder, "history.json")
-output_plot_file = lambda target_folder: os.path.join(
-    target_folder, "training_progress.png"
-)
-images_gen_checkpoint_file = lambda target_folder: os.path.join(
-    target_folder, "gen_checkpoint.json"
-)
-epoch_tracker_file = lambda target_folder: os.path.join(target_folder, "epoch.dat")
-checkpoint_file = lambda target_folder: os.path.join(target_folder, "%s%s.pth"%(CHECKPOINT_FILE_PREFIX, time.ctime()))
-model_file = lambda target_folder : os.path.join(target_folder, "%s%s"%(MODEL_FILE_PREFIX, time.ctime()))

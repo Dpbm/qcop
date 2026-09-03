@@ -20,8 +20,11 @@ clean-h5:
 	@echo "Deleting h5 files..."
 	rm -rf ./data/*.h5
 
+run-generate-images:
+	[[ ! -d ./data ]] && mkdir -p ./data ; python generate_images_dataset.py --target-folder ./data --threads 20 --max-gates 70 --amount-circuits 10000  
+
 run-dataset:
-	[[ ! -d ./data ]] && mkdir -p ./data ; python create-dataset.py --target-folder ./data --threads 20 --max-gates 40 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
+	 python create-dataset.py --target-folder ./data --threads 20 --max-gates 40 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
 
 run-embeddings:
 	accelerate launch embeddings.py --target-folder ./data --batch-size 100 --preload-amount 500 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
