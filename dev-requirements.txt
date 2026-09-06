@@ -1,8 +1,1 @@
-ruff
-tox
-mypy
-types-tqdm
 pytest
-jupyterlab
-seaborn
-PyWavelets

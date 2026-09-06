@@ -8,17 +8,11 @@ qiskit-ibm-runtime
 qiskit_qasm3_import
 Pillow
 torch==2.7.0
-torchvision==0.22.0
 h5py
-polars
 pandas
-apache-airflow==2.11.0
-apache-airflow-providers-standard
-psycopg2-binary
 kagglehub
 huggingface_hub
 lark
 cupy-cuda12x
-nbconvert
 transformers
 accelerate
