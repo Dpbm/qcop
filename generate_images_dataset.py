@@ -22,7 +22,7 @@ IMAGES_CHECKPOINT_FILE = "images_checkpoint.json"
 def main(args:argparse.Namespace):
     images_data_path = os.path.join(args.target_folder, IMAGES_PATH)
 
-    checkpoint = Checkpoint.get_checkpoint(os.path.join(args.target_folder, IMAGES_CHECKPOINT_FILE))
+    checkpoint = Checkpoint(os.path.join(args.target_folder, IMAGES_CHECKPOINT_FILE))
     img_handler = Images(images_data_path)
     df = DF(os.path.join(args.target_folder, DATASET_FILE))
 
