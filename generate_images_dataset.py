@@ -19,11 +19,6 @@ from utils.constants import (
 
 IMAGES_CHECKPOINT_FILE = "images_checkpoint.json"
 
-def update_rows_callback(rows:DFRows, checkpoint:Checkpoint, df:DF, inc: int):
-    df.append_rows_to_file(rows)
-    checkpoint.index += inc
-    checkpoint.save()
-
 def main(args:argparse.Namespace):
     images_data_path = os.path.join(args.target_folder, IMAGES_PATH)
 
@@ -38,10 +33,9 @@ def main(args:argparse.Namespace):
                 args.amount_circuits, 
                 args.max_gates,
                 args.shots,
-                lambda rows,inc: update_rows_callback(rows, checkpoint, df, inc),
+                df,
                 args.threads,
                 checkpoint,
-                circuit_format_counter=checkpoint.index
     )
 
 if __name__ == "__main__":

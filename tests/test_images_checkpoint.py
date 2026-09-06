@@ -5,21 +5,6 @@ import pytest
 
 from generate.images import Checkpoint
 
-@pytest.fixture
-def checkpoint_path() -> str:
-    """Fake checkpoint file"""
-    return os.path.join("tests", "checkpoint.json")
-
-@pytest.fixture
-def clean_up(checkpoint_path):
-    """Clean checkpoint files"""
-
-    yield # yield is when the fixture is called
-
-    # after executing the test this part is going to run
-    if os.path.exists(checkpoint_path):
-        os.remove(checkpoint_path)
-
 class TestImagesCheckpoint:
     def test_failed_on_finidng_file_constructor(self,checkpoint_path):
         try:

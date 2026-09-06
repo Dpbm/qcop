@@ -5,21 +5,6 @@ import pandas as pd
 
 from generate.images import DF
 
-@pytest.fixture
-def df_path() -> str:
-    """A dummy csv file for testing"""
-    return os.path.join("tests", "test_df.csv")
-
-@pytest.fixture
-def clean_up(df_path):
-    """Clean DF files"""
-
-    yield # yield is when the fixture is called
-
-    # after executing the test this part is going to run
-    if os.path.exists(df_path):
-        os.remove(df_path)
-
 class TestDF:
     def test_df_doesnt_exist(self,df_path,clean_up):
         df = DF(df_path)

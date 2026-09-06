@@ -11,17 +11,14 @@ class Checkpoint:
 
     def __init__(self, path: FilePath):
         self._path = path
+        
+        if not os.path.exists(path):
+            Checkpoint.create_empty(path)
 
         with open(path, "r") as file:
             data = json.load(file)
             self._thread_indexes = data.get("thread_indexes", [])
             self._index = data.get("index", 0)
-
-    @classmethod
-    def get_checkpoint(cls, path:FilePath):
-        if not os.path.exists(path):
-            Checkpoint.create_empty(path)
-        return cls(path)
 
     @property
     def index(self) -> int:

@@ -19,11 +19,11 @@ from qiskit.transpiler import generate_preset_pass_manager
 from qiskit_aer import AerSimulator
 from qiskit_aer.primitives import Sampler
 
-from utils.datatypes import  FilePath
+from utils.datatypes import  FilePath,DFRows,Measurements
 from utils.constants import SCALE_CIRCUIT_SIZE
-from generate.datatypes import *
 from generate.random_circuit import get_random_circuit
 from .checkpoint import Checkpoint
+from .dataframe import DF
 
 STEP_FOR_SAVE_CHECKPOINT = 10
 
@@ -47,12 +47,13 @@ class Images:
         amount_circuits:int,
         total_gates:int,
         shots:int,
-        callback:Callable,
+        df:DF,
         total_threads: int,
         checkpoint:Checkpoint,
-        circuit_format_counter:int=0,
     ):
         """Generate the images split into threads."""
+
+        circuit_format_counter = checkpoint.index
 
         measurement_combs = Images._get_combinations_of_measurements(n_qubits)
         total_measurement_combs = len(measurement_combs)
@@ -62,8 +63,10 @@ class Images:
                 args = []
 
                 has_thread_indexes = len(checkpoint.thread_indexes) > 0
-
-                for i in range(total_threads):
+                total_iter =  (amount_circuits - circuit_format_counter) \
+                                if total_threads > (amount_circuits - circuit_format_counter) \
+                                else total_threads
+                for i in range(total_iter):
                     args.append(
                         (
                             i,
@@ -94,8 +97,11 @@ class Images:
                         except Exception as error:
                             print("Error: %s" % error)
                             sys.exit(1)
-                    callback(rows, total_threads)
+
+                    df.append_rows_to_file(rows)
+                    checkpoint.index += total_iter
                     checkpoint.thread_indexes = [ 0 for _ in range(total_threads) ]
+                    checkpoint.save()
 
     def _generate_circuit_images(
             self,
@@ -107,7 +113,7 @@ class Images:
             shots: int,
             callback:Callable,
             current_index:int=0,
-    ) -> List[Schema]:
+    ) -> DFRows:
         """ Run an experiment, save its images and return its results for different combinations 
         of measurements.
         """
