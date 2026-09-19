@@ -1,6 +1,6 @@
 """Generate random circuits by hand"""
 
-from typing import List, Optional
+import random
 
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import RYGate, XGate, ZGate, HGate, IGate, CXGate, CZGate, SwapGate
@@ -10,88 +10,116 @@ import numpy as np
 from utils.constants import DEFAULT_RANDOM_SEED
 
 class RandomCircuit:
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self, seed:int=DEFAULT_RANDOM_SEED):
         self._all_gates = {
-            'x': lambda: XGate(),
-            'z': lambda: ZGate(),
-            'h': lambda: HGate(),
-            'id': lambda: IGate(),
-            'cx': lambda: CXGate(),
-            'cz': lambda: CZGate(),
-            'swap': lambda: SwapGate(),
-            'ry': lambda theta: RYGate(theta)
+            'x': lambda  x: XGate(), 
+            'z': lambda x: ZGate(), 
+            'h': lambda x: HGate(), 
+            'id': lambda x: IGate(),  
+            'cx': lambda x: CXGate(), 
+            'cz': lambda x: CZGate(), 
+            'swap': lambda x: SwapGate(), 
+            'ry':lambda theta: RYGate(theta)
         }
-        self._single_qubit = ['x', 'z', 'h', 'id', 'ry']
         self._two_qubit = ['cx', 'cz', 'swap']
-        self._with_parameters = ['ry']
+        self._one_qubit = ['x', 'z', 'id', 'h', 'ry']
 
+        self._low_param = 0
+        self._high_param = 2*np.pi
+        
         self._rng = np.random.default_rng(seed)
 
     def _get_angle(self) -> float:
-        return float(self._rng.uniform(0, 2 * np.pi))
+        return self._rng.uniform(low=self._low_param,high=self._high_param,size=None)
 
-    def _select_target_qubits(self, num_qubits: int, num_targets: int, topology: str) -> List[int]:
-        """Selects qubit targets based on sampled connectivity topology."""
-        if num_targets == 1 or topology == "global" or num_qubits <= 2:
-            return self._rng.choice(num_qubits, num_targets, replace=False).tolist()
-
-        if topology == "local":
-            q1 = int(self._rng.choice(num_qubits))
-            q2 = (q1 + int(self._rng.choice([-1, 1]))) % num_qubits
-            return [q1, q2]
-        
-        return self._rng.choice(num_qubits, num_targets, replace=False).tolist()
-
-    def get_random_circuit(
-        self, 
-        num_gates: int, 
-        num_qubits: int, 
-        max_layers: int = 5
-    ) -> QuantumCircuit:
+    
+    def get_random_circuit(self, max_gates:int, num_qubits:int, max_barriers:int) -> QuantumCircuit:
         qc = QuantumCircuit(num_qubits)
 
-        p_two_qubit = self._rng.beta(0.5, 1.5)        # Biased toward single-qubit or two-qubit
-        p_identity = self._rng.choice([0.0, 0.1, 0.3, 0.5]) # Forces active vs highly sparse qubits
-        topology = self._rng.choice(["global", "local", "local"]) # Biased toward sparse spatial connectivity
+        # so the circuit can be empty, with 0.1% of chance
+        if self._rng.random() <= 0.001:
+            # it can have variants with barriers
+            num_barriers = np.random.randint(0,max_barriers)
+            if not num_barriers:
+                return qc
 
-        single_weight = (1.0 - p_two_qubit) * (1.0 - p_identity) / (len(self._single_qubit) - 1)
-        
-        weights = {}
-        for g in self._single_qubit:
-            weights[g] = p_identity if g == 'id' else single_weight
-        for g in self._two_qubit:
-            weights[g] = p_two_qubit / len(self._two_qubit)
-
-        gate_names = list(weights.keys())
-        gate_probs = np.array(list(weights.values()), dtype=np.float64)
-        gate_probs /= np.sum(gate_probs)  # Normalize
-
-        num_layers = int(self._rng.integers(1, max_layers + 1))
-        
-        layer_splits = self._rng.dirichlet(np.ones(num_layers) * 0.5)
-        gates_per_layer = self._rng.multinomial(num_gates, layer_splits)
-
-        for l_idx, count in enumerate(gates_per_layer):
-            if count == 0:
-                continue
-
-            selected_gates = self._rng.choice(gate_names, size=count, p=gate_probs)
-
-            for g_name in selected_gates:
-                n_q = 2 if g_name in self._two_qubit else 1
-                pos = self._select_target_qubits(num_qubits, n_q, topology)
-
-                gate_obj = (
-                    self._all_gates[g_name](self._get_angle()) 
-                    if g_name in self._with_parameters 
-                    else self._all_gates[g_name]()
-                )
-                qc.append(gate_obj, pos, copy=False)
-
-            if l_idx < num_layers - 1 and self._rng.random() < 0.4:
+            for _ in range(num_barriers):
                 qc.barrier()
+            return qc
+            
+        c = max_gates
+        b = max_barriers
+        while c > 0:
+
+            # it can stop by random in the middle
+            stop_now = self._rng.random() < 0.001
+            if stop_now:
+                break
+
+            which_type = 2
+            r = self._rng.random()
+            if r <= 0.05:
+                which_type = 1
+            elif r <= 0.475:
+                which_type = 2
+            else:
+                which_type = 3
+
+            if which_type == 1:# barrier
+                if b <= 0: # no more barriers in this case
+                    continue
+
+                if b == 1:
+                    qc.barrier()
+                    b = 0
+                    continue
+                
+                quantity = np.random.randint(1,b)
+                b -= quantity
+                
+                for _ in range(quantity):
+                    qc.barrier()
+    
+            elif which_type == 2: # one qubit gate
+                quantity = 1
+                if c != 1:
+                    quantity = np.random.randint(1,c)
+                c -= quantity
+
+                selected_gates = random.choices(self._one_qubit,k=quantity)
+                selected_qubits = random.choices(range(num_qubits),k=quantity)
+
+                for gate,qubit in zip(selected_gates, selected_qubits):
+                    angle = self._get_angle()
+                    qc.append(self._all_gates[gate](angle), [qubit])
+                
+                    
+            else: # two qubit gate
+                quantity = 1
+                if c != 1:
+                    quantity = np.random.randint(1,c)
+                c -= quantity
+
+                selected_gates = random.choices(self._two_qubit,k=quantity)
+                
+                controls = [np.random.randint(0,num_qubits-1) for _ in range(quantity)]
+                targets = []
+                for i in range(quantity):
+                    #target and control must be different
+                    while True:
+                        selected_target  = np.random.randint(0,num_qubits-1)
+                        if selected_target != controls[i]:
+                            targets.append(selected_target)
+                            break
+                
+                for gate,c,t in zip(selected_gates, controls, targets):
+                    qc.append(self._all_gates[gate](None), [c,t])
+            
+        if self._rng.random() <= 0.01 and b > 0:
+            qc.barrier()
 
         return qc
+        
 
 def get_random_circuit(n_qubits: int, total_gates: int) -> QuantumCircuit:
     """Thread-safe dataset generation function."""
@@ -99,7 +127,7 @@ def get_random_circuit(n_qubits: int, total_gates: int) -> QuantumCircuit:
     rc = RandomCircuit(seed=local_seed)
 
     gates = int(np.random.randint(1, max(2, total_gates + 1)))
-    layers = int(np.random.randint(1, 8))
+    barriers = int(np.random.randint(1,6))
 
-    return rc.get_random_circuit(num_gates=gates, num_qubits=n_qubits, max_layers=layers)
+    return rc.get_random_circuit(gates,n_qubits,barriers)
 
