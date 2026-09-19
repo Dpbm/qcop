@@ -2,6 +2,7 @@ import os
 import json
 
 import pytest
+import pandas as pd
 
 from generate.images import Checkpoint, Images, DF
 from generate.images.generate import update_index_callback
@@ -184,6 +185,10 @@ class TestImageGeneration:
         assert checkpoint.index == 5
         assert df._current_index == 15 # 5 circuits with 3 different measurements each
         assert sorted(os.listdir(images_path)) == sorted([ f"{i}.png" for i in range(15)])
+
+        read_df = pd.read_csv(df_path)
+        assert len(read_df) == 15
+
 
     def test_generate_multiple_circuits_start_from_checkpoint(self, images_path,checkpoint_path,df_path): 
         os.makedirs(images_path, exist_ok=True)

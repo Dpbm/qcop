@@ -102,6 +102,7 @@ class Images:
                     checkpoint.index += total_iter
                     checkpoint.thread_indexes = [ 0 for _ in range(total_threads) ]
                     checkpoint.save()
+                    df.save_df()
 
     def _generate_circuit_images(
             self,

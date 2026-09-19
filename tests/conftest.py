@@ -6,39 +6,42 @@ import shutil
 import pytest
 
 @pytest.fixture
-def checkpoint_path() -> str:
+def target_folder() -> str:
+    """Target data folder"""
+    return os.path.join("tests", "data")
+
+@pytest.fixture
+def checkpoint_path(target_folder) -> str:
     """Fake checkpoint file"""
-    return os.path.join("tests", "checkpoint.json")
+    return os.path.join(target_folder, "checkpoint.json")
 
 @pytest.fixture
-def df_path() -> str:
+def df_path(target_folder) -> str:
     """A dummy csv file for testing"""
-    return os.path.join("tests", "test_df.csv")
+    return os.path.join(target_folder, "test_df.csv")
 
 @pytest.fixture
-def images_path() -> str:
+def images_path(target_folder) -> str:
     """A dummy folder for storing generated images"""
-    return os.path.join("tests", "images")
+    return os.path.join(target_folder, "images")
 
-def clean(*args) -> None:
+def clean(folder) -> None:
+    if not os.path.exists(folder):
+        return
+    
+    shutil.rmtree(folder)
 
-    for path in args:
-        if not os.path.exists(path):
-            continue
-
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-        else:
-            os.remove(path)
 
 @pytest.fixture(autouse=True)
-def clean_up(checkpoint_path, df_path, images_path):
+def clean_up(target_folder):
     """Clean checkpoint files"""
 
     #before tests
-    clean(checkpoint_path, df_path, images_path)
+    clean(target_folder)
+
+    os.makedirs(target_folder, exist_ok=True)
 
     yield
     
     #after tests
-    clean(checkpoint_path, df_path, images_path)
+    clean(target_folder)

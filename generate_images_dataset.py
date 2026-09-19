@@ -38,6 +38,9 @@ def main(args:argparse.Namespace):
                 checkpoint,
     )
 
+    # just to guarantee that all the data will be in the CSV file
+    df.save_df()
+
 if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser()
