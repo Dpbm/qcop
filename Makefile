@@ -20,20 +20,11 @@ clean-h5:
 	@echo "Deleting h5 files..."
 	rm -rf ./data/*.h5
 
-run-generate-images:
-	[[ ! -d ./data ]] && mkdir -p ./data ; python generate_images_dataset.py --target-folder ./data --threads 20 --max-gates 70 --amount-circuits 10000  
-
-run-dataset:
-	 python create-dataset.py --target-folder ./data --threads 20 --max-gates 40 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
+generate-images:
+	[[ ! -d ./data ]] && mkdir -p ./data ; python generate_images_dataset.py --target-folder ./data --threads 100 --max-gates 100 --amount-circuits 100000  
 
 run-embeddings:
 	accelerate launch embeddings.py --target-folder ./data --batch-size 100 --preload-amount 500 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
 
-run-ghz:
-	python ghz.py --target-folder ./data
-
 run-model:
 	PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python model_dense.py --target-folder ./data --epochs 30 --load-checkpoint True --scheduler-patience 2 --batch-size 100
-
-run-ghz-eval:
-	python eval-ghz.py --target-folder ./data

@@ -1,5 +1,4 @@
 """Checkpoint for dataset generation"""
-from typing import List
 import json
 import os
 
@@ -17,7 +16,6 @@ class Checkpoint:
 
         with open(path, "r") as file:
             data = json.load(file)
-            self._thread_indexes = data.get("thread_indexes", [])
             self._index = data.get("index", 0)
 
     @property
@@ -30,22 +28,11 @@ class Checkpoint:
         """update index"""
         self._index = value
     
-    @property
-    def thread_indexes(self) -> List[int]:
-        """get thread indexes"""
-        return self._thread_indexes
-
-    @thread_indexes.setter
-    def thread_indexes(self, value: List[int]):
-        """update thread indexes"""
-        self._thread_indexes = value
-
     def save(self):
         """Saves checkpoint to a json file"""
         with open(self._path, "w") as file:
             data = {
                 "index": self._index,
-                "thread_indexes": self._thread_indexes
             }
             json.dump(data, file)
     
@@ -55,7 +42,6 @@ class Checkpoint:
         with open(path, "w") as file:
             data = {
                 "index": 0,
-                "thread_indexes": []
             }
             json.dump(data, file)
 

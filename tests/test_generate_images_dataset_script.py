@@ -19,11 +19,12 @@ class TestScript:
             threads=1,
             max_gates=10))
 
+        # this one asserts if there're files for checkpoint, images folder and dataset.csv
         assert len(os.listdir(target_folder)) == 3
-        assert len(os.listdir(os.path.join(target_folder,IMAGES_PATH))) == 3
 
+        assert len(os.listdir(os.path.join(target_folder,IMAGES_PATH))) == 1
         df = pd.read_csv(os.path.join(target_folder,DATASET_FILE))
-        assert len(df) == 3
+        assert len(df) == 1
         
 
 

@@ -15,7 +15,7 @@ DEFAULT_EPOCHS = 60
 
 DEFAULT_SHOTS = 1000
 DEFAULT_NUM_QUBITS = 5
-DEFAULT_MAX_TOTAL_GATES = 20
+DEFAULT_MAX_TOTAL_GATES = 60
 DEFAULT_THREADS = 10
 DEFAULT_AMOUNT_OF_CIRCUITS = 2000  # this one doesn't reflect exactly the size of the dataset, once the dataset might get either bigger, due to the different combinations of mesurements, or smaller due to duplicated circuits
 

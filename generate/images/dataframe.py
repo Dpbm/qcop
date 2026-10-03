@@ -16,8 +16,6 @@ class DF:
             "file",
             "result",
             "hash",
-            "total_meas",
-            "measurements",
             "img_width",
             "img_height",
             "n_two_qubit_gates",

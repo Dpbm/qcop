@@ -3,7 +3,8 @@
 from typing import List,Dict,Any
 
 FilePath = str
-DFRows = List[Dict[str,Any]]
+DFRow = Dict[str,Any]
+DFRows = List[DFRow]
 
 Measurement = List[int]
 Measurements = List[Measurement]
