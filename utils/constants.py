@@ -23,6 +23,7 @@ SCALE_CIRCUIT_SIZE = 0.5
 
 DATASET_FILE = "dataset.csv"
 IMAGES_PATH = "images"
+CSV_OUTPUTS_DATA = "circuit_outputs.csv"
 
 # ----- RANDOMNESS --------
 

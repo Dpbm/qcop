@@ -23,8 +23,8 @@ clean-h5:
 generate-images:
 	[[ ! -d ./data ]] && mkdir -p ./data ; python generate_images_dataset.py --target-folder ./data --threads 100 --max-gates 100 --amount-circuits 100000  
 
-run-embeddings:
-	accelerate launch embeddings.py --target-folder ./data --batch-size 100 --preload-amount 500 --dataset-name-kaggle "dpbmanalysis/quantum-circuit-images" --dataset-name-hf "Dpbm/quantum-circuits"
+embeddings:
+	accelerate launch embeddings.py --target-folder ./data --batch-size 100 --preload-amount 500
 
 run-model:
 	PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python model_dense.py --target-folder ./data --epochs 30 --load-checkpoint True --scheduler-patience 2 --batch-size 100

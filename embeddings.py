@@ -1,103 +1,107 @@
+import sys
 import os
 import asyncio
 import argparse
 import json
 
+import pandas as pd
 from tqdm import tqdm
 from PIL import Image
 from transformers import pipeline
 from accelerate import Accelerator
 import h5py
-import matplotlib.pyplot as plt
 import numpy as np
 
-from generate.dataset.files import Files
-from utils.constants import DEFAULT_DATASET_NAME, MODEL
-from export import export_parallel
+from utils.constants import DEFAULT_DATASET_NAME, MODEL, CSV_OUTPUTS_DATA
 
+CHECKPOINT_FILE = os.path.join("data", "embeddings_checkpoint.json")
+SHAPE_FILE = os.path.join("data", "shape.json")
 
 def main():
     parser = argparse.ArgumentParser(description=f"Extract image embeddings from dataset with {MODEL}")
     parser.add_argument("--preload-amount", type=int, default=1000)
     parser.add_argument("--batch-size", type=int, default=512)
     parser.add_argument("--target-folder", type=str, required=True)
-    parser.add_argument("--initial-index", type=int, default=0)
-    parser.add_argument("--only-export", type=bool, default=False)
-    parser.add_argument("--dataset-name-kaggle", type=str, default=DEFAULT_DATASET_NAME)
-    parser.add_argument("--dataset-name-hf", type=str, default=DEFAULT_DATASET_NAME)
     args = parser.parse_args()
 
-    if args.only_export:
-        asyncio.run(export_parallel(args.target_folder, args.dataset_name_kaggle,os.getenv("HUGGINGFACE_API_KEY"), args.dataset_name_hf))
-        exit()
-
-    files_handler = Files(args.target_folder) 
+    if not os.path.exists(os.path.join("data", CSV_OUTPUTS_DATA)):
+        sys.exit(f"No file {CSV_OUTPUTS_DATA}")
 
     device = Accelerator().device
     print("[*] Using device: ", device)
     print("[*] preload amount of images: ", args.preload_amount)
     print("[*] batch size: ", args.batch_size)
-    print("[*] initial index: (", args.initial_index, ")")
 
     pipe = pipeline(task="image-feature-extraction", model=MODEL, device=device, batch_size=args.batch_size)
-    
-    indexes = []
-    finished = False
-    saved_shape = os.path.exists(files_handler.embeddings_shape_path)
 
-    if os.path.exists(files_handler.embeddings_checkpoint_path):
-        print("[*] Reading chekpoint")
-        with open(files_handler.embeddings_checkpoint_path,'r') as checkpoint:
+    checkpoint_exists = os.path.exists(CHECKPOINT_FILE)
+
+    if not checkpoint_exists:
+        print("[!] No Checkpoint...")
+        df = pd.read_csv(os.path.join("data", CSV_OUTPUTS_DATA))
+        h5_files = list(df.h5_file.unique())
+        saved_shape = False
+    else:
+        with open(CHECKPOINT_FILE, "r") as checkpoint:
+            print("[*] Loading Checkpoint...")
             data = json.load(checkpoint)
-            indexes = list(data["indexes"])
-            finished = data["finished"]
-    
-    if not finished:
+            h5_files = data["h5_files"]
+            saved_shape = data["saved_shape"]
+            keys = data["keys"]
 
-        with h5py.File(files_handler.h5_file_path, "r") as dataset:
+    current_h5 = 0
+    for h5 in h5_files:
+        h5_file = h5.replace("../", '')
+        print(f"[*] Using file: {h5_file}")
 
-            if not indexes:
-                print("[*] adding indexes")
-                indexes = list(dataset.keys())
-                with open(files_handler.embeddings_checkpoint_path, 'w') as checkpoint:
-                    json.dump({"indexes":indexes, finished:False},checkpoint)
+        with h5py.File(h5_file, 'r') as dataset_images:
+            all_keys = list(dataset_images.keys()) if not checkpoint_exists else keys
 
-            print("[*] total images in the dataset: ", len(indexes))
-            current_index = 0
-            while indexes:
-                selected_indexes = [indexes[i] 
-                                        for i in range(args.preload_amount)
-                                        if i <= len(indexes)-1]
-                preloaded_images = [Image.fromarray(dataset[index][:])
-                                             for index in selected_indexes]
+            while True:
+                selected_keys = all_keys[:args.preload_amount]
                 
-                print("Processing (", current_index, ")")
+                preloaded_images = [
+                    Image.fromarray(dataset_images[index][:])
+                    for index in selected_keys
+                ]
 
                 embeddings = np.array(pipe(preloaded_images), dtype=np.float16)
-                
+
                 if not saved_shape:
-                    with open(files_handler.embeddings_shape_path, "w") as shape_file:
+                    with open(SHAPE_FILE, "w") as shape_file:
                         print("[*] Saving embeddings format")
                         json.dump(list(embeddings.shape[1:]), shape_file)
                     saved_shape = True
 
+                with h5py.File(h5_file.replace("images_", "embeddings_"), "a") as embeddings_dataset:
+                    for embedding,index in tqdm(zip(embeddings, selected_keys), desc="Saving embeddings: "):
+                        embeddings_dataset.create_dataset(f"{index}", data=embedding)
 
-                with h5py.File(files_handler.embeddings_path, "a") as embeddings_dataset:
-                    for embedding,index in tqdm(zip(embeddings, selected_indexes), desc="Saving embeddings: "):
-                        embeddings_dataset.create_dataset(index, data=embedding)
+                start_index += args.preload_amount
+                all_keys = list(set(all_keys) - set(selected_keys))
 
-                indexes = list(set(indexes) - set(selected_indexes))
-                with open(files_handler.embeddings_checkpoint_path, 'w') as checkpoint:
-                    print("[*] Updating checkpoint")
-                    json.dump({"indexes":indexes, "finished":False}, checkpoint)
-                current_index += 1
+                with open(CHECKPOINT_FILE, "w") as checkpoint:
+                    print("[*] saving checkpoint...")
+                    json.dump({
+                        "h5_files":h5_files,
+                        "saved_shape":saved_shape,
+                        "keys":all_keys
+                        },checkpoint)
 
-    with open(files_handler.embeddings_checkpoint_path, 'w') as checkpoint:
-        print("[*] Updating checkpoint (Finished)")
-        json.dump({"indexes":[], "finished":True}, checkpoint)
+                if len(all_keys) <= 0:
+                    break
 
-    print("[*] Uploading dataset")
-    asyncio.run(export_parallel(args.target_folder, args.dataset_name_kaggle,os.getenv("HUGGINGFACE_API_KEY"), args.dataset_name_hf))
+
+        current_h5 += 1
+
+        with open(CHECKPOINT_FILE, "w") as checkpoint:
+            print("[*] saving checkpoint for new h5...")
+            json.dump({
+                "h5_files":h5_files[current_h5:],
+                "saved_shape":saved_shape,
+                "keys":all_keys
+                },checkpoint)
+        
 
 if __name__ == "__main__":
     main()
