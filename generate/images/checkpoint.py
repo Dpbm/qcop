@@ -2,7 +2,6 @@
 import json
 import os
 
-from generate.dataset.files import Files
 from utils.datatypes import FilePath
 
 class Checkpoint:
